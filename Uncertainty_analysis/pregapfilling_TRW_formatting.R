@@ -176,7 +176,7 @@ tree.stack <- merge(tree.stack, tree.data, all.x=T, all.y=F)
 summary(tree.stack)
 dim(tree.stack)
 
-write.csv(tree.stack, "TreeRWL_Valles_stacked.csv", row.names=F)
+write.csv(tree.stack, "TreeRWL_AllSites_stacked.csv", row.names=F)
 
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
