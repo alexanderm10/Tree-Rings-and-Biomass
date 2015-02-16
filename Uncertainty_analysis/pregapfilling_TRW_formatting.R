@@ -33,9 +33,8 @@ summary(tree.data)
 
 #importing ring widths of dated samples as an object and making plot a factor since there were two distinct plots.  We may remove this for the nested design.  
 #Removing NA's from the files
-# FUTURE NOTE: need to create a generalizeable file to house all RW measurements
-core.rw <- read.rwl("valles_all_trees.rwl")
-head(core.rw)
+# NOTE: reading in a single rwl with all measured trees otherwise you're going to need to make sure to change the file paths for EVERYTHING otherwise you overwrite important files and make a lot more work for yourself
+core.rw <- read.rwl("RWL/RWL_all_trees.rwl")
 summary(core.rw)
 
 #removing the extra character that tellervo adds
@@ -74,7 +73,7 @@ for(j in colnames(core.rw)){ # rather than going by number, we're using names to
 		}
 	}
 }
-summary(core.rw)
+summary(core.rw[,c(1:10, (ncol(core.rw)-10):ncol(core.rw))])
 # ----------------------------------------------------------------------------
 
 
