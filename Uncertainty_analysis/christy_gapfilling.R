@@ -41,13 +41,23 @@ q.blank <- theme(axis.line=element_line(color="black", size=0.5), panel.grid.maj
 # 3) Aggregate to tree (factoring in whether cores were dated) level & decide if an entire tree is dated or not -- WRITE THIS AS A FILE!
 # 4) Stack RWL & Merge with metadata (becomes "ring.data" or named equivalent)
 
-
 # Ring.data format: stack all of the core BAI, so that data frame with a SIGNLE BAI column, and then all of the factors in other columns
-ring.data <- read.csv("TreeRWL_Valles_stacked.csv")
+ring.data <- read.csv("TreeRWL_AllSites_stacked.csv")
 ring.data$tree <- as.factor(ring.data$tree) 
 summary(ring.data)
 
+# Tree Data
 tree.data <- read.csv("TreeData.csv")
+summary(tree.data)
+
+# Site Data (for year cored) 
+site.data <- read.csv("input files/DOE_plus_valles.csv", na.strings="")
+site.data$Year.sample <- as.numeric(substr(site.data$date.sample,7,10))
+summary(site.data)
+
+# merging in the year sampled into the tree data & calculating age
+tree.data <- merge(tree.data, site.data[,c("PlotID", "Year.sample")], all.x=T, all.y=F)
+tree.data$Age <- tree.data$Year.sample - tree.data$Pith
 summary(tree.data)
 
 # We're going to run 2 sets of fillin models:
@@ -70,7 +80,6 @@ trees.dated <- ring.data[ring.data$Dated=="Y","TreeID"]
 # ----------------------------------------------------------------
 
 
-
 # ----------------------------------------------------------------
 # The spline doesn't fit outside the range of observed values, so we need to give it a "null" guess
 # As a very very rough guess right now, filling missing with the measurement from the oldest ring
@@ -82,811 +91,317 @@ trees.dated <- ring.data[ring.data$Dated=="Y","TreeID"]
 # ---------------------------------------
 # What we need: core summary data (DBH, estimated pith date)
 
+# Ignoring all the sites we don't have and doing some exploratory graphing
+tree.data2 <- tree.data[tree.data$PlotID %in% unique(ring.data$PlotID),]
+summary(tree.data2)
+
+# Need to remove species for which we have no pith estimates for the time being
+spp.pith <- unique(tree.data2[!is.na(tree.data2$Pith), "spp"])
+tree.data3 <- tree.data2[tree.data2$spp %in%  spp.pith,]
+summary(tree.data3)
+
+qplot(dbh, Age, color=spp, data=tree.data3) + facet_wrap(~spp) +
+	stat_smooth(method="lm", alpha=0.5, size=1.5) +
+	theme_bw()
+
+
+# Making a very basic linear model looking at site-specific species-dbh-age relationships
+dbh.age <- lm(Age ~ spp*dbh*site-1, data=tree.data3)
+summary(dbh.age)
+summary(dbh.age)$r.squared # Note, this very basic model works pretty well!
+
+# Using the prediction interval to get us a higher upper bound
+age.pi <- predict(dbh.age, newdata=tree.data3, interval="predict")
+summary(age.pi)
+dim(age.pi); dim(tree.data3) # Making sure we didn't lose any rows along the way
+
+tree.data3 <- cbind(tree.data3, age.pi)
+summary(tree.data3)
+
+# Setting the filling window to the upper p.i. limit
+tree.data3$fill.year <- ifelse(is.na(tree.data3$Pith), tree.data3$Year.sample-tree.data3$upr, tree.data3$Pith)
+summary(tree.data3)
+
+
+# Merging this back into a data frame that contains info for all the trees we're modeling right now
+tree.data.model <- merge(tree.data3, tree.data2, all.x=T, all.y=T)
+summary(tree.data.model)
+
+#--------------------- 
+# QUESTION: what to do about the species with no pith estimates?
+#	For now, I'm just going to do a species-naive fit within each plot
+#--------------------- 
+dbh.age.plot <- lm(Age ~ dbh*PlotID-1, data=tree.data.model)
+summary(dbh.age.plot) 
+
+age.pi.plot <- predict(dbh.age.plot, newdata= tree.data.model, interval="predict")
+summary(age.pi.plot)
+dim(age.pi.plot); dim(tree.data.model)
+
+summary(tree.data.model)
+# Filling missing fill.year with one caluclated form age.pi.plot fill 
+tree.data.model[is.na(tree.data.model$fill.year),"fill.year"] <- tree.data.model[is.na(tree.data.model$fill.year),"Year.sample"] - age.pi.plot[which(is.na(tree.data.model$fill.year)),3]
+summary(tree.data.model)
+#--------------------- 
 # ---------------------------------------
 
 # ---------------------------------------
+# ORIGINAL USAGE: Provide dummy variable
 # 2) fill the modeling window with non-0 values... perhaps mean growth from last decade or past observed trend?
+#		QUESTION: What dummy value do we want to give it?
+#			For now, I'm going to do the mean of the last decade
 # ---------------------------------------
-ring.data$RW0 <- ring.data$RW
+# summary(ring.data)
+
+# ring.data$RW0 <- ring.data$RW # Making a column of dummy-filled ring widths
+# for(i in unique(ring.data$TreeID)){
+	# #------------------------------
+	# #year.fill = the oldest year to fill based on above step (prediction interval, size-species-site relationships)
+	# #year.min = the oldest year measured
+	# #rw.fill = the dummy ring width to feed the model; right now this is for the last measured decade 
+	# #			-- (yr.min + 10) means the 10 years following year.min (
+	# #			-- e.g. if min year = 1950, we'll fill with the mean value from 1950:1960
+	# #------------------------------
+	# yr.fill <- tree.data.model[tree.data.model$TreeID==i,"fill.year"]
+	# yr.min <- min(ring.data[ring.data$TreeID==i & !is.na(ring.data$RW), "Year"])
+	# rw.fill <- mean(ring.data[ring.data$TreeID==i & ring.data$Year>=yr.min & ring.data$Year<=(yr.min+10), "RW"],na.rm=T)
+	# #------------------------------
+
+	# #------------------------------
+	# # The actual insertion of the dummy fil value into the fill range
+	# #------------------------------
+	# ring.data[ring.data$TreeID==i & is.na(ring.data$RW) & ring.data$Year>=yr.fill, "RW0"] <- rw.fill
+	# #------------------------------
+# }
+# summary(ring.data)
+# # ---------------------------------------
+
+# ---------------------------------------
+# New Usage: delete NAs for years way outside what we think we should be fitting
+# 2b) I still don't think we want to be fi
+# ---------------------------------------
+summary(tree.data.model)
+summary(ring.data)
+dim(ring.data)
+
 for(i in unique(ring.data$TreeID)){
-	yr <- min(ring.data[ring.data$TreeID==i & !is.na(ring.data$RW), "Year"])
-  #fill.first # The first (e.g. X number years past where you measured) ring to add a dummy measurement
-  #fill.RW # the value we stick in the years we want to dummy-fill (e.g. the mean for the last decade)
-	ring.data[ring.data$TreeID==i & is.na(ring.data$RW), "RW0"] <- ring.data[ring.data$TreeID==i & ring.data$Year==yr, "RW"]
+	#------------------------------
+	#year.fill = the oldest year to fill based on above step (prediction interval, size-species-site relationships)
+	#------------------------------
+	yr.fill <- tree.data.model[tree.data.model$TreeID==i,"fill.year"]
+	#------------------------------
+
+	#------------------------------
+	# The actual insertion of the dummy fil value into the fill range
+	#------------------------------
+	ring.data <- ring.data[!(ring.data$TreeID==i & ring.data$Year<yr.fill),]
+	#------------------------------
 }
 summary(ring.data)
+dim(ring.data)
 # ---------------------------------------
 # ----------------------------------------------------------------
 
+# ----------------------------------------------------------------
+# ----------------------------------------------------------------
+# RUNNING THE GAMM!!
+# ----------------------------------------------------------------
+# ----------------------------------------------------------------
 # A generalized additive mixed model (gamm) allows us to fit splines in a mixed model context
 # we can let these splines vary by tree which essentially detrends the core
 # here's we're using our dummy-filled ring widths as a response so that the spline will fit over the whole time period of interest
 # NOTE: for this to work with canopy class, we'll need to figure out what to do about dead trees 
-m1 <- gamm(RW0 ~ s(Year, bs="cs", k=3, by=TreeID) + spp + dbh, random=list(site=~1, PlotID=~1), data=ring.data, na.action=na.omit)
+# NOTE: Right now this is set up for each site separately.  If you want to borrow strength from other sites to help gap fill certain species, run them together
+# ----------------------------------------------------------------
+
+# ---------------------------------------
+# Morgan Monroe Forest
+# ---------------------------------------
+ring.data.mmf <- ring.data[substr(ring.data$PlotID,1,2)=="MM",]
+ring.data.mmf <- droplevels(ring.data.mmf) 
+# Note: the log link with the gaussian family to prevent fitting negative values requires that you can't actually have 0 growth so we're going to make it really really small instead
+ring.data.mmf$RW <- ifelse(ring.data.mmf$RW==0, 1e-6, ring.data.mmf$RW)
+summary(ring.data.mmf)
+
+
+gamm.mmf <- gamm(log(RW) ~ s(Year, bs="cs", k=3, by=TreeID) + dbh, random=list(spp=~1, site=~1, PlotID=~1), data= ring.data.mmf, na.action=na.omit)
 
 # Saving the GAMM From above so we can load it without having to refit it
-save(m1, file="GapFilling_gamm_valles_02.2015.rData")
+save(gamm.mmf, file="GapFilling_gamm_mmf_02.2015.rData")
 
-# This isn't a great way of doing it, but it'll let you see the splines for each of the cores
-par(mfrow=c(4,5), mar=c(2,2,0,0)+0.1)
-plot(m1$gam)
+# # This isn't a great way of doing it, but it'll let you see the splines for each of the cores
+# par(mfrow=c(4,5), mar=c(2,2,0,0)+0.1)
+# plot(gamm.mmf$gam)
 
-ring.data$RW.modeled <- predict(m1, ring.data)
-summary(ring.data)
+# Making Predicted ring widths
+ring.data.mmf$RW.modeled <- exp(predict(gamm.mmf, ring.data.mmf))
+summary(ring.data.mmf)
 
-# Getting rid of negative ring width because they're impossible --> replacing with 0 to help with later
-ring.data$RW.modeled <- ifelse(ring.data$RW.modeled < 0, 0, ring.data$RW.modeled)
-summary(ring.data)
+# Graphing of the modeled rings we will use to fill the data (note this isn't truncating ones that are past where we think pith actually is)
+pdf("gamm_gapfill_mmf.pdf", height=7.5, width=10)
+ggplot() + facet_wrap(~spp) +
+	geom_path(aes(x=Year, y=RW, color=spp), data=ring.data.mmf, size=0.5) +
+	geom_point(aes(x=Year, y=RW.modeled), ring.data.mmf[is.na(ring.data.mmf$RW),], size=0.5) +
+	scale_y_continuous(limits=c(0,1.25)) +
+	theme_bw()
+dev.off()
+# ---------------------------------------
+
+
+# ---------------------------------------
+# Valles Caldera (Upper & Lower modeled together)
+# ---------------------------------------
+ring.data.valles <- ring.data[substr(ring.data$PlotID,1,2)=="VL" | substr(ring.data$PlotID,1,2)=="VU",]
+ring.data.valles <- droplevels(ring.data.valles)
+ring.data.valles $RW <- ifelse(ring.data.valles$RW==0, 1e-6, ring.data.valles$RW)
+summary(ring.data.valles)
+
+gamm.valles <- gamm(log(RW) ~ s(Year, bs="cs", k=3, by=TreeID) + dbh, random=list(spp=~1, site=~1, PlotID=~1), data= ring.data.valles, na.action=na.omit)
+
+# Saving the GAMM From above so we can load it without having to refit it
+save(gamm.valles, file="GapFilling_gamm_valles_02.2015.rData")
+
+# # This isn't a great way of doing it, but it'll let you see the splines for each of the cores
+# par(mfrow=c(4,5), mar=c(2,2,0,0)+0.1)
+# plot(gamm.valles$gam)
+
+ring.data.valles$RW.modeled <- exp(predict(gamm.valles, ring.data.valles))
+summary(ring.data.valles)
+
 
 # VERY rough graphing of the modeled rings we will use to fill the data
-par(new=F, mfrow=c(1,1), mar=c(5,5,0,0)+0.1)
-for(i in unique(ring.data$TreeID)){
-	plot(RW ~ Year, data=ring.data[ring.data$TreeID==i,], type="l", lwd=0.5, xlim=range(ring.data$Year, na.rm=T), ylim=range(ring.data$RW, na.rm=T))
-	par(new=T)
-}
-for(i in unique(ring.data$TreeID)){
-	plot(RW.modeled ~ Year, data=ring.data[ring.data$TreeID==i & is.na(ring.data$RW),], type="p", cex=0.4, pch=19, col="red", xlim=range(ring.data$Year, na.rm=T), ylim=range(ring.data$RW, na.rm=T), ylab="")
-	par(new=T)
-}
-# for(i in unique(ring.data$TreeID)){
-	# plot(RW.m1b ~ Year, data=ring.data[ring.data$TreeID==i & is.na(ring.data$RW),], type="p", cex=0.5, pch=19, col="blue", xlim=range(ring.data$Year, na.rm=T), ylim=range(ring.data$RW, na.rm=T))
-	# par(new=T)
-# }
-par(new=F)
-
-plot(RW.modeled ~ RW, pch=19, xlim=c(0,1), ylim=c(0,1), data=ring.data)
-abline(a=0, b=1, col="red")
-
-
-############
-# Creating a data frame with just predicted
-predict0 <- ring.data[,c("TreeID", "Year", "RW.modeled")]
-predict0$Year <- as.factor(predict0$Year)
-summary(predict0)
-
-trees.predict <- recast(predict0, Year ~ TreeID)
-#summary(trees.predict)
-trees.predict [1:10,1:10]
-trees.predict [(length(trees.predict [,1])-10):length(trees.predict[,1]),1:10]
-
-write.csv(trees.predict, "Trees_RW_modeled.csv", row.names=F)
-
-############
-# Creating a data frame with just observed
-trees.obs <- ring.data[,c("TreeID", "Year", "RW")]
-trees.obs $Year <- as.factor(trees.obs $Year)
-summary(trees.obs)
-
-trees.obs <- recast(trees.obs, Year ~ TreeID)
-#summary(trees.obs)
-head(trees.obs[,1:10])
-trees.obs[(length(trees.obs[,1])-10):length(trees.obs[,1]),1:10]
-
-summary(trees.obs)
-write.csv(trees.obs, "Trees_RW_measured.csv", row.names=F)
-
-####################################################
-# replacing missing ring widths with predicted values (positive or 0)
-####################################################
-trees.obs <- read.csv("Trees_RW_measured.csv", row.names=1)
-trees.predict <- read.csv("Trees_RW_modeled.csv", row.names=1)
-
-# replacing observed with predicted where I don't have ring measurements
-trees.gapfill <- trees.obs
-
-for(j in 1:ncol(trees.gapfill)){
-	trees.gapfill[is.na(trees.gapfill[,j]),j] <- trees.predict[is.na(trees.gapfill[,j]),j]
-	}
-
-#min(trees.gapfill[,2:ncol(trees.gapfill)])
-trees.gapfill[1:10,1:10]
-trees.gapfill[(length(trees.gapfill[,1])-20):length(trees.gapfill[,1]),1:10]
-min(trees.gapfill)
-
-# checking dimensions, adding year row names
-dim(trees.gapfill)
-
-write.csv(trees.gapfill, "Trees_RW_gapfilled.csv", row.names=T)
-
-
-
-
-
-
-
-
-
-# --------------------------------------------------------------------------------
-# --------------------------------------------------------------------------------
-# Haven't been through the rest of this script yet!
-# --------------------------------------------------------------------------------
-# --------------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-###################################
-# Reconstructing Basal Area working from the outside in
-###################################
-
-# Reading in core data
-cores.data <- read.csv("Cores_Data_Measured.csv")
-cores.data$Plot <- as.factor(cores.data$Plot)
-cores.data$Tree <- as.factor(cores.data$Tree)
-summary(cores.data)
-
-
-
-##############
-# Actual BA reconstruction
-cores.ba.cum <- as.data.frame(array(dim=dim(trees.gapfill)))
-names(cores.ba.cum) <- names(trees.gapfill)
-rownames(cores.ba.cum) <- rownames(trees.gapfill)
-
-# original to try to do without resorting
-#for(j in seq_along(trees.gapfill)){
-#	test[length(trees.gapfill[,j]),j] <- pi*((cores.data[cores.data$TreeID==names(trees.gapfill[j]),"DBH"]*10)^2)
-#	for(i in 1:(length(test[,j])-1)){
-#	test[i,j] <- test[i-1,j] - trees.gapfill[i,j]
-#}
-#}
-
-for(j in 1:ncol(trees.gapfill)){
-	# inserting 2013 BA (pi*(DBH/2)^2) for FLT (sampled in 2013) & NA for everthing else
-	cores.ba.cum[1,j] <- ifelse(substr(names(trees.gapfill[j]), 1, 3)=="FLT", 
-	pi*(((cores.data[cores.data$TreeID==names(trees.gapfill[j]),"DBH"]*10)/2)^2), NA)
-	
-	# calculating 2012 BA for FLT only
-	cores.ba.cum[2,j] <- ifelse(substr(names(trees.gapfill[j]), 1, 3)=="FLT", 
-	 cores.ba.cum[1,j] - trees.gapfill[1,j], # For FLT calculate BA by subtracting 2013
-	pi*(((cores.data[cores.data$TreeID==names(trees.gapfill[j]),"DBH"]*10)/2)^2)) # for non-FLT, insert 2012 BA
-	
-	# subtracting BAI measurement from diamBAeter of previous year to get end-of-season BA 
-	for(i in 3:(length(cores.ba.cum[,j]))){
-	cores.ba.cum[i,j] <- ifelse(trees.gapfill[i,j]>0, cores.ba.cum[i-1,j] - trees.gapfill[i-1,j], 0) 
-	}
-	}
-
-# checking the data frame: check to make sure numbers get smaller through time
-#summary(cores.ba.cum)
-#head(cores.ba.cum)
-dim(cores.ba.cum)
-cores.ba.cum[1:10,1:10]
-cores.ba.cum[103:113,1:10]
-cores.ba.cum[(length(cores.ba.cum[,1])-10):length(cores.ba.cum[,1]),1:10]
-
-min(cores.ba.cum, na.rm=T)
-
-# Removing negative Basal Areas (become 0)
-for(j in 1:ncol(cores.ba.cum)){
-	for(i in 1:(length(cores.ba.cum[,j]))){
-	cores.ba.cum[i,j] <- ifelse(cores.ba.cum[i,j]>0, cores.ba.cum[i,j], 0)
-}
-}
-
-cores.ba.cum[1:10,1:10]
-cores.ba.cum[103:113,1:10]
-
-min(cores.ba.cum, na.rm=T)
-
-
-#summary(cores.ba.cum)
-row.names(cores.ba.cum)
-
-write.csv(cores.ba.cum, "AllCores_BA_Cumulative_NoCorrection.csv", row.names=T)
-
-########################################################################################################
-########################################################################################################
-# Calculating Pith
-########################################################################################################
-########################################################################################################
-cores.ba.cum <- read.csv("AllCores_BA_Cumulative_NoCorrection.csv", row.names=1)
-cores.ba.cum[1:10,1:10]
-cores.ba.cum[103:113,1:10]
-cores.ba.cum[(length(cores.ba.cum[,1])-10):length(cores.ba.cum[,1]),1:10]
-
-# Reading in core data
-cores.data <- read.csv("Cores_Data_Measured.csv")
-cores.data$Plot <- as.factor(cores.data$Plot)
-cores.data$Tree <- as.factor(cores.data$Tree)
-summary(cores.data)
-dim(cores.data)
-
-# Extract last non-0 year (calculated Pith)
-cores.pith <- as.data.frame(array(dim=c(ncol(cores.ba.cum),2)))
-dim(cores.pith)
-names(cores.pith) <- c("TreeID", "pith.calc")
-summary(cores.pith)
-
-cores.pith$TreeID <- as.factor(colnames(cores.ba.cum))
-summary(cores.pith)
-
-# BAI-calculated pith year = outer year + 1 - number of non-NA values
-# NOTE: will need to change this when FLT gets added in
-for(j in 1:ncol(cores.ba.cum)){
-	cores.pith[cores.pith$TreeID==names(cores.ba.cum[j]),"pith.calc"] <- ifelse(substr(names(cores.ba.cum[j]), 1, 3)=="FLT",
-	2014-sum(cores.ba.cum[,j]>0, na.rm=T), 
-	2013-sum(cores.ba.cum[,j]>0, na.rm=T))
-	}
-
-# Finding the Basal Area at the innermost year
-for(j in 1:ncol(cores.ba.cum)){
-	cores.pith[cores.pith$TreeID==names(cores.ba.cum[j]),"Inner.BA"] <- cores.ba.cum[2014-cores.data[cores.data$TreeID==names(cores.ba.cum[j]),"Inner"],j]
-}
-
-
-summary(cores.pith)
-cores.pith[is.na(cores.pith$Inner.BA),]
-head(cores.pith)
-head(data.cores)
-dim(cores.pith)
-dim(data.cores)
-
-cores.pith[,4:27] <- cores.data[,c(3:8,10:27)]
-summary(cores.pith)
-
-cores.pith[1:10,]
-cores.pith[(length(cores.pith[,1])-10):length(cores.pith[,1]),]
-
-summary(cores.pith)
-
-########################################################################################################
-# Acutal Pith Model
-########################################################################################################
-cores.ba.cum <- read.csv("AllCores_BA_Cumulative_NoCorrection.csv", row.names=1)
-cores.ba.cum[1:10,1:10]
-cores.ba.cum[103:113,1:10]
-cores.ba.cum[(length(cores.ba.cum[,1])-10):length(cores.ba.cum[,1]),1:10]
-
-cores.pith <- read.csv("Establishment_AllCores.csv")
-cores.pith$est.calc <- cores.pith$Pith.Yr - cores.pith$pith.calc
-summary(cores.pith)
-hist(cores.pith$est.calc)
-
-
-# Visulalizing estimated (BA reconstruction) & observed pith
-plot(pith.calc ~ Pith.Yr, data=cores.pith, main="Modeled vs. Estmiated Pith", pch=19)
-
-# Modeling pith year based on the 2012/2013 year DBH and the BA at the inner most year
-m.pith <- lme(Pith.Yr ~ pith.calc + DBH, data=cores.pith[!is.na(cores.pith$Inner.BA),], random=list(Site=~1, Trans=~1, PlotID=~1), na.action=na.omit)
-summary(m.pith)
-m.pith.R2 <- r.squaredGLMM(m.pith)
-m.pith.R2 # R2m = 0.804291, R2c = 0.8357807
-
-# Modeling Pith based on above equation
-cores.pith$pith.modeled <- predict(m.pith, newdata=cores.pith)
-summary(cores.pith)
-
-# Finding the Basal Area at the modeled pith
-for(j in 1:ncol(cores.ba.cum)){
-	cores.pith[cores.pith$TreeID==names(cores.ba.cum[j]),"Pith.Mod.BA"] <- cores.ba.cum[2014-cores.pith[cores.pith$TreeID==names(cores.ba.cum[j]),"pith.modeled"],j]
-}
-summary(cores.pith)
-
-# looking at estimated - modeled 
-cores.pith$est.mod <- cores.pith$Pith.Yr - cores.pith$pith.modeled
-summary(cores.pith) # range of visual estimate & model: -15 - 5
-
-plot(Pith.Yr ~ pith.modeled, data=cores.pith, subset=Pith.Yr>1900)
-
-# double checking how model compares to Pith
-m.pith0 <- lm(Pith.Yr ~ pith.modeled, data=cores.pith, subset=Pith.Yr>1900)
-summary(m.pith0) #0.8419
-
-
-
-summary(cores.pith)
-hist(cores.pith$Pith.offset)
-hist(cores.pith$est.mod)
-hist(cores.pith$Inner.BA)
-hist(cores.pith[cores.pith$Inner.BA<10000, "Inner.BA"])
-hist(cores.pith[cores.pith$Inner.BA<1000, "Inner.BA"])
-hist(cores.pith$Pith.Mod.BA)
-hist(cores.pith[cores.pith$Pith.Mod.BA<10000, "Pith.Mod.BA"])
-plot(cores.pith$est.mod ~ cores.pith$Pith.offset)
-plot(cores.pith$Pith.Yr ~ cores.pith$pith.modeled)
-
-hist(cores.pith$Pith.offset)
-
-# NOTE: COULD ADD LAYER HERE WHERE WE ONLY USE PITH DATES FROM DATED TREES OR ALL TREES
-# If there's a pith estimate & offset is <= 10 OR modeled > inner, use core pith est
-# If there's a pith estimate AND ((offset is >10 years AND modeled !< inner) OR inner Basal Area > 5,000), average core & modeled
-# If no pith estimate AND modeled < inner, use modeled 
-# IF no pith estimate AND modeled > inner, use inner
-for(i in 1:length(cores.pith$Pith.Yr)){
-cores.pith$pith.use[i] <- ifelse(!is.na(cores.pith$Pith.Yr[i]) & (cores.pith$Pith.offset[i]<=10 |  cores.pith$Inner<cores.pith$pith.modeled), cores.pith$Pith.Yr[i], 
-                                 ifelse(!is.na(cores.pith$Pith.Yr[i]) & cores.pith$Pith.offset[i]>10 & cores.pith$Inner[i] > cores.pith$pith.modeled[i], mean(cores.pith$Pith.Yr[i], cores.pith$pith.modeled[i]), 
-                                 ifelse(is.na(cores.pith$Pith.Yr[i]) & cores.pith$Inner[i] >= cores.pith$pith.modeled[i], cores.pith$pith.modeled[i], cores.pith$Inner[i])))
-}
-
-summary(cores.pith)
-summary(cores.pith$pith.use)
-
-sum(!is.na(cores.pith$Pith.Yr) & (cores.pith$Pith.offset<=10 | cores.pith$Inner < cores.pith$pith.modeled)) # number of visual estimates used: 913
-sum(!is.na(cores.pith$Pith.Yr) & cores.pith$Pith.offset>10 & cores.pith$Inner > cores.pith$pith.modeled) # number of averaged used: 28
-sum(is.na(cores.pith$Pith.Yr) & cores.pith$Inner>=cores.pith$pith.modeled) # number of modeled pith used: 202
-sum(is.na(cores.pith$Pith.Yr) & cores.pith$Inner<cores.pith$pith.modeled) # had to go with inner year as best guess: 45
-
-dim(cores.pith)
-913 + 28 + 202 + 45
-
-
-# Finding the Basal Area at the Pith I'm using
-for(j in 1:ncol(cores.ba.cum)){
-	cores.pith[cores.pith$TreeID==names(cores.ba.cum[j]),"Pith.Use.BA"] <- cores.ba.cum[2014-cores.pith[cores.pith$TreeID==names(cores.ba.cum[j]),"pith.use"],j]
-}
-
-# converting BA to DBH
-cores.pith$pith.dbh <- sqrt(cores.pith$Pith.Use.BA/pi)*.1
-
-summary(cores.pith$pith.dbh) # note, despite the range, most of the data goes to 0
-summary(cores.pith[cores.pith$Pith=="Y", "pith.dbh"])
-
-hist(cores.pith$pith.dbh)
-
-write.csv(cores.pith, "Establishment_AllCores.csv", row.names=F)
-
-##################################################################################
-##################################################################################
-# Plotting establishment --> see separate script
-##################################################################################
-##################################################################################
-
-
-##################################################################################
-##################################################################################
-
-##################################################################################
-# Removing bai earlier than predicted pith date & replacing with 0 (important to ensure no decreases in average basal area through time)
-##################################################################################
-# reading in establishment data
-cores.pith <- read.csv("Establishment_AllCores.csv")
-summary(cores.pith)
-## Make sure no cores have missing Pith Estimates
-
-# if need to get rid of missing pith estimates
-#cores.pith2 <- cores.pith[!is.na(cores.pith$pith.use),]
-#summary(cores.pith2)
-#dim(cores.pith)
-
-# reading in calculated core data
-trees.obs.mix <- read.csv("AllCores_BAI_meas_predicted.csv", row.names=1)
-#summary(trees.obs.mix)
-trees.obs.mix[1:10, 1:10]
-trees.obs.mix[100:110, 1:10]
-trees.obs.mix[200:210, 1:10]
-dim(trees.obs.mix)
-
-names1 <- names(trees.obs.mix)
-names2 <- unique(cores.pith$TreeID)
-length(names1)
-length(names2)
-
-
-cores.pith[cores.pith$TreeID==colnames(trees.obs.mix["BLDA101"]),"pith.use"]
-
-
-dim(trees.obs.mix)
-
-# creating an object with the range of years
-years <- row.names(trees.obs.mix)
-
-# trees.obs.filled = filled data with Pith Correction
-# A faster version with help from John
-trees.obs.filled <- trees.obs.mix
-nrow(trees.obs.filled)
-nrow(trees.obs.mix)
-
-trees.obs.filled[1:10, 1:10]
-trees.obs.filled[100:110, 1:10]
-trees.obs.filled[233:243, 1:10]
-trees.obs.filled[(nrow(trees.obs.filled)-10):nrow(trees.obs.filled), 1:10]
-
-
-summary(cores.pith)
-
-for(j in 1:ncol(trees.obs.filled)){
-	# create a value with pith year for each core (j)
-	temp.row <- 2015 - cores.pith[cores.pith$TreeID==colnames(trees.obs.filled[j]),"pith.use"]
-	if(temp.row < nrow(trees.obs.filled)) 
-	trees.obs.filled[temp.row:nrow(trees.obs.filled), j] <- 0 # 2015 means keep pith year)
-	}
-
-trees.obs.filled[1:10, 1:10]
-trees.obs.filled[100:110, 1:10]
-trees.obs.filled[(nrow(trees.obs.filled)-10):nrow(trees.obs.filled), 1:10]
-min(trees.obs.filled, na.rm=T)
-sum(is.na(trees.obs.filled))
-sum(is.na(trees.obs.mix))
-dim(trees.obs.mix)
-
-#summary(trees.obs.filled)
-row.names(trees.obs.filled)
-
-write.csv(trees.obs.filled, "AllCores_BAI_filledtopith.csv", row.names=T)
-
-#par(new=F)
-#for(j in seq_along(trees.obs.filled)){
-#		plot(trees.obs.filled[,j] ~ as.numeric(row.names(trees.obs.filled[1])), xlim=range(as.numeric(row.names(trees.obs.filled[1]))), ylim=range(trees.obs.filled, na.rm=T), xlab="Year", ylab="mm2", type="l", lwd=0.1)
-#	par(new=T)
-#}
-
-##################################################################################
-# Correcting BA calcuations
-##################################################################################
-cores.pith <- read.csv("Establishment_AllCores.csv")
-summary(cores.pith)
-## Make sure no cores have missing Pith Estimates
-
-# reading in calculated core data
-cores.ba.cum <- read.csv("AllCores_BA_Cumulative_NoCorrection.csv", row.names=1)
-
-cores.ba.cum[1:10,1:10]
-cores.ba.cum[103:113,1:10]
-cores.ba.cum[(length(cores.ba.cum[,1])-10):length(cores.ba.cum[,1]),1:10]
-
-
-names1 <- names(cores.ba.cum)
-names2 <- unique(cores.pith$TreeID)
-length(names1)
-length(names2)
-
-dim(cores.ba.cum)
-
-# creating an object with the range of years
-years <- row.names(cores.ba.cum)
-
-# cores.ba.corr = basal area data with Pith Correction
-cores.ba.corr <- cores.ba.cum
-for(j in 1:ncol(cores.ba.corr)){
-	# create a value with pith year for each core (j)
-	temp.row <- 2015 - cores.pith[cores.pith$TreeID==colnames(cores.ba.corr[j]),"pith.use"]
-	if(temp.row < nrow(cores.ba.corr)) cores.ba.corr[temp.row:nrow(cores.ba.corr), j] <- 0 # 2015 means keep pith year)
-	}
-
-cores.ba.corr[1:10, 1:10]
-cores.ba.corr[100:110, 1:10]
-cores.ba.corr[200:210, 1:10]
-min(cores.ba.corr, na.rm=T)
-sum(is.na(cores.ba.corr))
-sum(is.na(cores.ba.cum))
-dim(cores.ba.corr)
-
-#summary(trees.obs.filled)
-row.names(cores.ba.corr)
-
-write.csv(cores.ba.corr, "AllCores_BA_Cumulative_PithCorrected1.csv", row.names=T)
-
-# Plotting Basal Area through time
-par(new=F)
-for(j in seq_along(cores.ba.corr)){
-		plot(cores.ba.corr[,j] ~ as.numeric(row.names(cores.ba.corr[1])), xlim=range(as.numeric(row.names(cores.ba.corr[1]))), ylim=range(cores.ba.corr, na.rm=T), xlab="Year", ylab="m2/Ha", type="l", lwd=0.1)
-	par(new=T)
-}
-
-##########################
-
-####################################################
-# Smoothing out cumulative Basal Area at Pith by averaging in-out and out-in calculations of BA
-####################################################
-cores.pith <- read.csv("Establishment_AllCores.csv")
-cores.pith$est.calc <- cores.pith$Pith.Yr - cores.pith$pith.calc
-summary(cores.pith$pith.dbh)
-cores.pith[is.na(cores.pith$pith.dbh),]
-hist(cores.pith$pith.use)
-hist(cores.pith$pith.dbh)
-
-# Subsetting all cores >2 cm DBH at pith
-cores.check <- cores.pith[cores.pith$pith.dbh>2,c ("TreeID",  "Spp", "DBH",  "Inner", "Pith.Yr", "pith.calc", "est.calc", "pith.modeled", "pith.use", "pith.dbh")]
-cores.check <- cores.check[!is.na(cores.check$pith.dbh),]
-summary(cores.check)
-dim(cores.check)
-dim(cores.pith)
-nrow(cores.check)/nrow(cores.pith) # Proportion of cores with pith >2 CM DBH
-length(cores.check[!is.na(cores.check$Pith.Yr),1]) # 188 trees have a pith estimate; only 85 are missing pith est
-
-##################
-# Looking at the distributions
-par(new=F)
-hist(cores.pith$pith.dbh, main="Basal Area at Pith, All Trees")
-hist(cores.pith[cores.pith$pith.dbh>2, "pith.dbh"], main="", xlab="DBH (cm)")
-hist(cores.pith[cores.pith$pith.dbh<2, "pith.dbh"], main="", xlab="DBH (cm)")
-
-ggplot(data=cores.pith) + q.blank + facet_grid(Site ~ .) + geom_histogram(aes(x=pith.dbh), binwidth=.5) + ggtitle("DBH at pith, all trees") 
-ggplot(data=cores.pith[cores.pith$pith.dbh>=2 & !is.na(cores.pith$pith.dbh),]) + q.blank + facet_grid(Site ~ .) + geom_histogram(aes(x=pith.dbh), binwidth=.5) + ggtitle("DBH at pith, trees >= 2 cm dbh at pith") 
-ggplot(data=cores.pith[cores.pith$pith.dbh<2 & !is.na(cores.pith$pith.dbh),]) + q.blank + facet_grid(Site ~ .) + geom_histogram(aes(x=pith.dbh), binwidth=.5) + ggtitle("DBH at pith, trees < 2 cm dbh at pith") 
-##################
-cores.ba.corr <- read.csv("AllCores_BA_Cumulative_PithCorrected1.csv", row.names=1)
-cores.ba.corr[1:10, 1:10]
-cores.ba.corr[100:110, 1:10]
-cores.ba.corr[200:210, 1:10]
-min(cores.ba.corr, na.rm=T)
-
-# Reading in BAI file that will be necessary for corrections
-trees.obs.filled <- read.csv("AllCores_BAI_filledtopith.csv", row.names=1)
-trees.obs.filled[1:10, 1:10]
-trees.obs.filled[100:110, 1:10]
-trees.obs.filled[(nrow(trees.obs.filled)-10):nrow(trees.obs.filled), 1:10]
-min(trees.obs.filled, na.rm=T)
-sum(is.na(trees.obs.filled))
-
-
-########################
-# Making data frame for new corrected data
-#cores.ba.corr2 <- as.data.frame(array(dim=dim(cores.ba.corr)))
-#row.names(cores.ba.corr2) <- cores.ba.corr$Year
-#names(cores.ba.corr2) <- names(cores.ba.corr)
-
-# making a data frame with only the trees that need to be fixed
-cores.ba.corr2 <- as.data.frame(array(dim=c(nrow(cores.ba.corr), nrow(cores.check))))
-row.names(cores.ba.corr2) <- row.names(cores.ba.corr)
-names(cores.ba.corr2) <- unique(cores.check$TreeID)
-dim(cores.ba.corr2)
-dim(cores.ba.corr)
-
-cores.ba.corr2[1:10, 1:10]
-cores.ba.corr2[100:110, 1:10]
-cores.ba.corr2[200:210, 1:10]
-names(cores.ba.corr2)
-#for(j in 1:ncol(cores.ba.corr2)){
-	# if the core is not in the list that needs to be fixed, just punk it into the data frame
-#	ifelse(!(names(cores.ba.corr2[j]) %in% cores.check$TreeID),  cores.ba.corr2[,j] <- cores.ba.corr[,j], 
-
-for(j in unique(cores.check$TreeID)){	
-	pith.row <- ifelse(2014 - cores.check[cores.check$TreeID==j, "pith.use"] < nrow(cores.ba.corr2), 2014 - cores.check[cores.check$TreeID==j, "pith.use"], nrow(cores.ba.corr2))
-
-	cores.ba.corr2[pith.row,j] <- trees.obs.filled[pith.row, j]
-	cores.ba.corr2[(pith.row+1):nrow(cores.ba.corr2),j] <- 0
-
-	for(i in (pith.row-1):1){
-		cores.ba.corr2[i,j] <- cores.ba.corr2[i+1, j] + trees.obs.filled[i,j]
-		}
-	}
-
-cores.ba.corr2[1:10, 1:10]
-cores.ba.corr2[100:110, 1:10]
-cores.ba.corr2[200:210, 1:10]
-
-######################
-cores.ba.corr3 <- as.data.frame(array(dim=dim(cores.ba.corr)))
-row.names(cores.ba.corr3) <- row.names(cores.ba.corr)
-names(cores.ba.corr3) <- names(cores.ba.corr)
-
-cores.ba.corr3[1:10, 1:10]
-cores.ba.corr3[100:110, 1:10]
-cores.ba.corr3[(nrow(cores.ba.corr3)-10):nrow(cores.ba.corr3), 1:10]
-
-dim(cores.ba.corr)
-dim(cores.ba.corr2)
-
-# Writing BA reconstructions that were fine
-for(j in unique(names(cores.ba.corr))){
-	if(!(j %in% cores.check$TreeID)) 
-	cores.ba.corr3[,j] <- cores.ba.corr[,j]
-
-# taking mean of in-out and original BA reconstructions	
-for(j in unique(names(cores.ba.corr2))){
-	if(j %in% cores.check$TreeID)
-	temp.ba <- as.data.frame(cores.ba.corr[,j])
-	temp.ba[,2] <- cores.ba.corr2[,j]
-	cores.ba.corr3[,j] <- rowMeans(temp.ba)
-}
-
-
-cores.ba.corr3[1:10, 1:10]
-cores.ba.corr3[100:110, 1:10]
-cores.ba.corr3[200:210, 1:10]
-
-write.csv(cores.ba.corr3, "AllCores_BA_Cumulative_PithCorrected_Final.csv", row.names=T)
-
-# Plotting Basal Area through time
-par(new=F)
-for(j in seq_along(cores.ba.corr3)){
-		plot(cores.ba.corr3[,j] ~ as.numeric(row.names(cores.ba.corr3[1])), xlim=range(as.numeric(row.names(cores.ba.corr3[1]))), ylim=range(cores.ba.corr3, na.rm=T), xlab="Year", ylab="m2/Ha", type="l", lwd=0.1)
-	par(new=T)
-}
-
-
-for(j in unique(cores.pith$TreeID)){
-	cores.pith[cores.pith$TreeID==j, "pith.ba.corr"] <- cores.ba.corr3[2014-cores.pith[cores.pith$TreeID==j, "pith.use"], j]
-	}
-cores.pith$pith.dbh.corr <- sqrt(cores.pith$pith.ba.corr/pi)*.1 
-summary(cores.pith)
-hist(cores.pith$pith.dbh.corr)
-hist(cores.pith$pith.dbh)
-
-cores.check2 <- cores.pith[cores.pith$pith.dbh.corr>2,c ("TreeID",  "Spp", "DBH",  "Inner", "Pith.Yr", "pith.calc", "est.calc", "pith.modeled", "pith.use", "pith.dbh.corr")]
-dim(cores.check2)
-dim(cores.check)
-summary(cores.check2)
-summary(cores.check)
-
-## NOTE: Some cores still have relatively large DBH at pith, but it's a lot better; worst offenders are all pre-1900
-
-
-
-
-
-##################################################################################
-##################################################################################
-
-
-
-################################
-# Adjusting Tree BA to a per hectare basis
-# To do this: multiple tree BA by stand density (for each tree)
-cores.data <- read.csv("Cores_Data_Measured.csv")
-cores.data$Plot <- as.factor(cores.data$Plot)
-cores.data$Tree <- as.factor(cores.data$Tree)
-summary(cores.data)
-
-cores.ba.corr <- read.csv("AllCores_BA_Cumulative_PithCorrected_Final.csv", row.names=1)
-cores.ba.corr[1:10, 1:10]
-cores.ba.corr[100:110, 1:10]
-cores.ba.corr[(nrow(cores.ba.corr)-10):nrow(cores.ba.corr), 1:10]
-
-cores.ba.ha <- cores.ba.corr
-# *.01 mm2 to cm2 *.0001
-for(j in unique(names(cores.ba.ha))){
-	density <- cores.data[cores.data$TreeID==j, "Density.ha"]
-	cores.ba.ha[,j] <- cores.ba.ha[,j] * density * .000001 # coverts mm2 to m2/ha
-}
-
-cores.ba.ha[1:10,1:10]
-
-min(cores.ba.ha, na.rm=T)
-
-write.csv(cores.ba.ha, "AllCores_BA_Cumulative_PithCorrected_perHA.csv", row.names=T)
-
-
-
-########################
-cores.ba.ha <- read.csv("AllCores_BA_Cumulative_PithCorrected_perHA.csv", row.names=1)
-cores.ba.ha[1:10,1:10]
-min(cores.ba.ha, na.rm=T)
-
-# Plotting Basal Area through time
-par(new=F)
-for(j in seq_along(cores.ba.ha)){
-		plot(cores.ba.ha[,j] ~ as.numeric(row.names(cores.ba.ha[1])), xlim=range(as.numeric(row.names(cores.ba.ha[1]))), ylim=range(cores.ba.ha, na.rm=T), xlab="Year", ylab="m2/Ha", type="l", lwd=0.1)
-	par(new=T)
-}
-
-
-##################################################################################
-##################################################################################
-# Adjusting Tree BA to a per hectare basis
-# To do this: multiple tree BA by stand density (for each tree)
-cores.pith <- read.csv("Establishment_AllCores.csv")
-summary(cores.pith)
-
-cores.ba.corr <- read.csv("AllCores_BA_Cumulative_PithCorrected_Final.csv", row.names=1)
-cores.ba.corr[1:10, 1:10]
-cores.ba.corr[100:110, 1:10]
-cores.ba.corr[(nrow(cores.ba.corr)-10):nrow(cores.ba.corr), 1:10]
-
-
-age.df <- data.frame(array(dim=dim(cores.ba.corr)))
-row.names(age.df) <- row.names(cores.ba.corr)
-names(age.df) <- names(cores.ba.corr)
-
-age.df[1:10, 1:10]
-age.df[100:110, 1:10]
-age.df[(nrow(age.df)-10):nrow(age.df), 1:10]
-
-for(j in unique(names(age.df))){
-	pith.row <- 2014-cores.pith[cores.pith$TreeID==j, "pith.use"]
-	
-	for(i in pith.row:1){
-		age.df[i,j] <- pith.row - i 
-	}
-	}
-
-# replacing 2013 for non-FLT with NA
-for(j in unique(names(age.df))){
-	age.df[1,j] <- ifelse(substr(j, 1, 3)=="FLT", age.df[1,j], NA)
-	}
-
-
-
-age.df[1:10, 1:10]
-age.df[100:110, 1:10]
-age.df[(nrow(age.df)-10):nrow(age.df), 1:10]
-
-
-write.csv(age.df, "AllCores_Age.csv", row.names=T)
-
-##################################################################################
-##################################################################################
-# Merging BAI & cumulative BA data sets
-
-ring.data <- read.csv("Cores_FullData_AllYrs.csv")
-ring.data$Plot <- as.factor(ring.data$Plot)
-ring.data$Tree <- as.factor(ring.data$Tree)
+pdf("gamm_gapfill_valles.pdf", height=7.5, width=10)
+ggplot() + facet_grid(spp~site) +
+	geom_path(aes(x=Year, y=RW, color=spp), data=ring.data.valles, size=0.25) +
+	geom_point(aes(x=Year, y=RW.modeled), ring.data.valles[is.na(ring.data.valles$RW),], size=0.5) +
+	scale_y_continuous(limits=c(0,1.25)) +
+	theme_bw()
+dev.off()
+# ---------------------------------------
+# ----------------------------------------------------------------
+
+# ----------------------------------------------------------------
+# Create a gapfilled data set
+# ----------------------------------------------------------------
+# ---------------------------------------
+# Data Formatting
+# ---------------------------------------
+# putting the sites back into 1 file
+dim(ring.data.valles); dim(ring.data.mmf)
+ring.data <- rbind(ring.data.valles, ring.data.mmf)
+
+# putting the modeled data where there are no ring widths (will cause negative dbh)
+ring.data$RW.gapfilled <- ifelse(is.na(ring.data$RW), ring.data$RW.modeled, ring.data$RW)
 summary(ring.data)
-dim(ring.data)
 
-ring.data <- ring.data[,c(1:21)]
-summary(ring.data)
-dim(ring.data)
+# making a data frame with trees as columns and years as ros
+ring.data$Year <- as.factor(ring.data$Year)
+trees.gapfilled <- recast(ring.data[,c("Year", "TreeID", "RW.gapfilled")], Year ~ TreeID)
+summary(trees.gapfilled)
 
-age <- read.csv("AllCores_Age.csv", row.names=1)
-age[1:10, 1:10]
-age.stack <- stack(age)
-names(age.stack) <- c("Age", "TreeID")
-age.stack$Year <- as.numeric(row.names(age))
-summary(age.stack)
+row.names(trees.gapfilled) <- trees.gapfilled$Year
+trees.gapfilled <- trees.gapfilled[,2:ncol(trees.gapfilled)]
+trees.gapfilled[(nrow(trees.gapfilled)-10):nrow(trees.gapfilled), 1:10]
+# ---------------------------------------
 
-cores.ba.ha <- read.csv("AllCores_BA_Cumulative_PithCorrected_perHA.csv", row.names=1)
-cores.ba.ha[1:10, 1:10]
-cores.ba.ha.stack <- stack(cores.ba.ha)
-names(cores.ba.ha.stack) <- c("BA.m2ha", "TreeID")
-cores.ba.ha.stack$Year <- as.numeric(row.names(cores.ba.ha))
-summary(cores.ba.ha.stack)
+# ---------------------------------------
+# DBH Reconstruction
+# ---------------------------------------
+# Tree Data
+tree.data <- read.csv("TreeData.csv")
+summary(tree.data)
 
+# Site Data (for year cored) 
+site.data <- read.csv("input files/DOE_plus_valles.csv", na.strings="")
+site.data$Year.sample <- as.numeric(substr(site.data$date.sample,7,10))
+summary(site.data)
 
-trees.obs.filled <- read.csv("AllCores_BAI_filledtopith.csv", row.names=1)
-#summary(trees.obs.filled)
-trees.obs.filled[1:10, 1:10]
-trees.obs.stack <- stack(trees.obs.filled)
-names(trees.obs.stack) <- c("BAI.filled", "TreeID")
-trees.obs.stack$Year <- as.numeric(row.names(trees.obs.filled))
-summary(trees.obs.stack)
+# merging in the year sampled into the tree data & calculating age
+tree.data <- merge(tree.data, site.data[,c("PlotID", "Year.sample")], all.x=T, all.y=F)
+tree.data$Age <- tree.data$Year.sample - tree.data$Pith
+summary(tree.data)
 
-cores.ba.corr <- read.csv("AllCores_BA_Cumulative_PithCorrected_Final.csv", row.names=1)
-#summary(cores.ba.cum)
-cores.ba.corr[1:10, 1:10]
-cores.ba.tree <- stack(cores.ba.corr)
-names(cores.ba.tree) <- c("BA.tree", "TreeID")
-cores.ba.tree$Year <- as.numeric(row.names(cores.ba.corr))
-summary(cores.ba.tree)
+core.data <- read.csv("Core_data_DOE_summer_2014.csv", na.strings=c("", "NA", "#VALUE!", "*"), header=T)
+#adding a column include which plot at the site the trees belong to
+names(core.data)
+core.data$plot <- substr(core.data$plot.id, 3, 3)
+core.data$plot <- as.factor(core.data$plot)
+summary(core.data)
 
-ring.data1 <- merge(ring.data, age.stack, all.x=T)
-summary(ring.data1)
-dim(ring.data1)
-dim(ring.data)
+# Ordering the data
+trees.gapfilled <- trees.gapfilled[order(row.names(trees.gapfilled), decreasing=T),order(names(trees.gapfilled))]
+trees.gapfilled[1:10, 1:10]
+trees.gapfilled[1:10, (ncol(trees.gapfilled)-10):ncol(trees.gapfilled)]
 
-ring.data2 <- merge(ring.data1, cores.ba.ha.stack, all.x=T)
-summary(ring.data2)
-dim(ring.data2)
-dim(ring.data1)
+dbh.recon <- trees.gapfilled
+trees.check <- vector() # trees with negative dbh
+for(j in names(dbh.recon)){
+	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH recon); 
+	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0
+	#	dbhrecon: fill year of sample with DBH when sampled
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA
+	trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])
 
-ring.data3 <- merge(ring.data2, trees.obs.stack, all.x=T)
-summary(ring.data3)
-dim(ring.data3)
-dim(ring.data2)
+	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA
+	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]
+	
+	# Doing the DBH reconstruction	
+	for(i in 2:(length(dbh.recon[,j]))){
+		dbh.recon[i,j] <- ifelse(!is.na(trees.gapfilled[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, dbh.recon[i,j]) # subtracting the previous year's growth from DBH to get that year's DBH
+	}
+	
+	# Get rid of dbh past the guestimated pith dates -- both dbh recon & gapfilled
+	if(!is.na(tree.data[tree.data$TreeID==j, "Pith"])){
+		dbh.recon[as.numeric(row.names(dbh.recon))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA
+		trees.gapfilled[as.numeric(row.names(trees.gapfilled))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA
+	} else 
+	if(is.na(tree.data[tree.data$TreeID==j, "Pith"])){ # Get rid of negative modeled dbh
+		dbh.recon[,j] <- ifelse(dbh.recon[,j]<0, NA, dbh.recon[,j]) 
+		trees.gapfilled[,j] <- ifelse(dbh.recon[,j]<0, NA, trees.gapfilled[,j]) 		
+	}
+	# also getting rid of these rings in the stacked ring data too
+	years.na <- row.names(trees.gapfilled)[which(is.na(trees.gapfilled[,j]))]
+	ring.data[ring.data$TreeID==j & ring.data$Year %in% years.na,"RW.gapfilled"] <- NA
 
-ring.data4 <- merge(ring.data3, cores.ba.tree, all.x=T)
-summary(ring.data4)
-dim(ring.data4)
-dim(ring.data3)
-
-# Adding Tree pres/abs
-ring.data4$Stems <- ifelse(ring.data4$BAI.filled>0 & !(is.na(ring.data4$BAI.filled)), 1, 0)
-summary(ring.data4)
-
-# Adding tree density per HA
-plot.data <- read.csv("PlotData.csv")
-plot.data$plot <- as.factor(plot.data$plot)
-summary(plot.data)
-
-for(j in unique(plot.data$plotID)){
-	plot.area <- plot.data[plot.data$plotID==j, "plot.canopy.area"]
-	ring.data4[ring.data4$PlotID==j,"Density.Ha"] <- ring.data4[ring.data4$PlotID==j,"Stems"]/plot.area * 10000
+	if(min(dbh.recon[,j], na.rm=T)<0) trees.check <- c(trees.check, j)
 }
+dbh.recon[1:20, 1:10]
+dbh.recon[1:20, (ncol(dbh.recon)-20):ncol(dbh.recon)]
+min(dbh.recon, na.rm=T)
+trees.check
+summary(dbh.recon[,trees.check])
 
-summary(ring.data4)
+# for trees with negative dbh, working from the inside out
+	# If a tree has a negative DBH, we're just going to add from the inside out (at time )
+for(j in trees.check){
+	if(min(dbh.recon[,j], na.rm=T)<0){
+		dbh.recon[,j] <- trees.gapfilled[,j]
+		for(i in (nrow(dbh.recon)-1):1){
+			dbh.recon[i,j] <- sum(dbh.recon[i+1, j], trees.gapfilled[i,j]*2, na.rm=T)
+			}
+	}
+}
+min(dbh.recon, na.rm=T)
+dbh.recon[1:10,trees.check]
+summary(dbh.recon[, trees.check])
+#trees.gapfilled[, trees.check]
+tree.data[tree.data$TreeID %in% trees.check,]
+# ---------------------------------------
+write.csv(dbh.recon, "gap_filled_dbh.recon.csv", row.names=T)
+write.csv(trees.gapfilled, "gap_filled_ring.widths.csv", row.names=T)
 
-write.csv(ring.data4, "Cores_FullData2_AllYrs.csv", row.names=F)
-
-ring.data <- read.csv("Cores_FullData2_AllYrs.csv")
-ring.data$Plot <- as.factor(ring.data$Plot)
-ring.data$Tree <- as.factor(ring.data$Tree)
 summary(ring.data)
+write.csv(ring.data, "TreeRWL_AllSites_stacked_gapfilled.csv", row.names=F)
+
+
+
+
+
+
+
+
+
+
 
 ##################################################################################
 # see next script for reconstructing basal area of trees with no samples 

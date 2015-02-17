@@ -1,0 +1,1207 @@
+ggplot() + facet_grid(spp~site) +#
+	geom_path(aes(x=Year, y=RW, color=spp), data=ring.data.valles, size=0.5) +#
+	geom_point(aes(x=Year, y=RW.modeled), ring.data.valles[is.na(ring.data.valles$RW),], size=0.5) +#
+	scale_y_continuous(limits=c(0,1.25)) +#
+	theme_bw()#
+dev.off()
+ggplot() + facet_grid(spp~site) +#
+	geom_path(aes(x=Year, y=RW, color=spp), data=ring.data.valles, size=0.5) +#
+	geom_point(aes(x=Year, y=RW.modeled), ring.data.valles[is.na(ring.data.valles$RW),], size=0.5) +#
+	scale_y_continuous(limits=c(0,1.25)) +#
+	theme_bw()
+ggplot() + facet_grid(spp~site) +#
+	geom_path(aes(x=Year, y=RW, color=spp), data=ring.data.valles, size=0.25) +#
+	geom_point(aes(x=Year, y=RW.modeled), ring.data.valles[is.na(ring.data.valles$RW),], size=0.5) +#
+	scale_y_continuous(limits=c(0,1.25)) +#
+	theme_bw()
+pdf("gamm_gapfill_valles.pdf", height=7.5, width=10)#
+ggplot() + facet_grid(spp~site) +#
+	geom_path(aes(x=Year, y=RW, color=spp), data=ring.data.valles, size=0.25) +#
+	geom_point(aes(x=Year, y=RW.modeled), ring.data.valles[is.na(ring.data.valles$RW),], size=0.5) +#
+	scale_y_continuous(limits=c(0,1.25)) +#
+	theme_bw()#
+dev.off()
+dim(ring.data.valles); dim(ring.data.mmf)
+ring.data <- rbind(ring.data.valles, ring.data.mmf)
+summary(ring.data)
+ring.data$RW.gapfilled <- ifelse(is.na(ring.data$RW), ring.data$RW.modeled, ring.data$RW)
+summary(ring.data)
+ring.data$Year <- as.factor(ring.data$Year)
+g
+summary(ring.data)
+trees.gapfilled <- recast(ring.data[,c("Year", "TreeID", "RW.gapfilled")], Year ~ TreeID)
+summary(trees.gapfilled)
+trees.gapfilled[1:20, 1:10]
+trees.gapfilled[(nrow(trees.gapfilled)-10):nrow(trees.gapfilled), 1:10]
+summary(tree.data3)
+tree.data3$fill.year <- ifelse(is.na(tree.data$Pith), tree.data3$Year.sample-tree.data3$upr, tree.data$Pith)
+tree.data3$fill.year <- ifelse(is.na(tree.data$Pith), tree.data3$Year.sample-tree.data3$upr, tree.data3$Pith)
+tree.data3$fill.year <- ifelse(is.na(tree.data3$Pith), tree.data3$Year.sample-tree.data3$upr, tree.data3$Pith)
+summary(tree.data3)
+tree.data.model <- merge(tree.data3, tree.data2, all.x=T, all.y=T)#
+summary(tree.data.model)
+#--------------------- #
+# QUESTION: what to do about the species with no pith estimates?#
+#	For now, I'm just going to do a species-naive fit within each plot#
+#--------------------- #
+dbh.age.plot <- lm(Age ~ dbh*PlotID-1, data=tree.data.model)#
+summary(dbh.age.plot) #
+#
+age.pi.plot <- predict(dbh.age.plot, newdata= tree.data.model, interval="predict")#
+summary(age.pi.plot)#
+dim(age.pi.plot); dim(tree.data.model)#
+#
+summary(tree.data.model)#
+# Filling missing fill.year with one caluclated form age.pi.plot fill #
+tree.data.model[is.na(tree.data.model$fill.year),"fill.year"] <- tree.data.model[is.na(tree.data.model$fill.year),"Year.sample"] - age.pi.plot[which(is.na(tree.data.model$fill.year)),3]#
+#---------------------
+summary(tree.data.model)
+# ---------------------------------------#
+# New Usage: delete NAs for years way outside what we think we should be fitting#
+# 2b) I still don't think we want to be fi#
+# ---------------------------------------#
+summary(tree.data.model)#
+summary(ring.data)#
+dim(ring.data)#
+#
+for(i in unique(ring.data$TreeID)){#
+	#------------------------------#
+	#year.fill = the oldest year to fill based on above step (prediction interval, size-species-site relationships)#
+	#------------------------------#
+	yr.fill <- tree.data.model[tree.data.model$TreeID==i,"fill.year"]#
+	#------------------------------#
+#
+	#------------------------------#
+	# The actual insertion of the dummy fil value into the fill range#
+	#------------------------------#
+	ring.data <- ring.data[!(ring.data$TreeID==i & ring.data$Year<yr.fill),]#
+	#------------------------------#
+}#
+summary(ring.data)#
+dim(ring.data)#
+# ---------------------------------------
+warnings()
+ring.data <- read.csv("TreeRWL_AllSites_stacked.csv")#
+ring.data$tree <- as.factor(ring.data$tree) #
+summary(ring.data)
+summary(tree.data.model)#
+summary(ring.data)#
+dim(ring.data)#
+#
+for(i in unique(ring.data$TreeID)){#
+	#------------------------------#
+	#year.fill = the oldest year to fill based on above step (prediction interval, size-species-site relationships)#
+	#------------------------------#
+	yr.fill <- tree.data.model[tree.data.model$TreeID==i,"fill.year"]#
+	#------------------------------#
+#
+	#------------------------------#
+	# The actual insertion of the dummy fil value into the fill range#
+	#------------------------------#
+	ring.data <- ring.data[!(ring.data$TreeID==i & ring.data$Year<yr.fill),]#
+	#------------------------------#
+}#
+summary(ring.data)#
+dim(ring.data)#
+# ---------------------------------------
+ring.data.mmf <- ring.data[substr(ring.data$PlotID,1,2)=="MM",]#
+ring.data.mmf <- droplevels(ring.data.mmf) #
+# Note: the log link with the gaussian family to prevent fitting negative values requires that you can't actually have 0 growth so we're going to make it really really small instead#
+ring.data.mmf$RW <- ifelse(ring.data.mmf$RW==0, 1e-6, ring.data.mmf$RW)#
+summary(ring.data.mmf)
+ring.data.mmf$RW.modeled <- exp(predict(gamm.mmf, ring.data.mmf))#
+summary(ring.data.mmf)
+ggplot() + facet_wrap(~spp) +#
+	geom_path(aes(x=Year, y=RW, color=spp), data=ring.data.mmf, size=0.5) +#
+	geom_point(aes(x=Year, y=RW.modeled), ring.data.mmf[is.na(ring.data.mmf$RW),], size=0.5) +#
+	scale_y_continuous(limits=c(0,1.25)) +#
+	theme_bw()
+pdf("gamm_gapfill_mmf.pdf", height=7.5, width=10)#
+ggplot() + facet_wrap(~spp) +#
+	geom_path(aes(x=Year, y=RW, color=spp), data=ring.data.mmf, size=0.5) +#
+	geom_point(aes(x=Year, y=RW.modeled), ring.data.mmf[is.na(ring.data.mmf$RW),], size=0.5) +#
+	scale_y_continuous(limits=c(0,1.25)) +#
+	theme_bw()#
+dev.off()
+ring.data.valles <- ring.data[substr(ring.data$PlotID,1,2)=="VL" | substr(ring.data$PlotID,1,2)=="VU",]#
+ring.data.valles <- droplevels(ring.data.valles)#
+ring.data.valles $RW <- ifelse(ring.data.valles$RW==0, 1e-6, ring.data.valles$RW)#
+summary(ring.data.valles)
+ring.data.valles$RW.modeled <- exp(predict(gamm.valles, ring.data.valles))#
+summary(ring.data.valles)
+ggplot() + facet_grid(spp~site) +#
+	geom_path(aes(x=Year, y=RW, color=spp), data=ring.data.valles, size=0.25) +#
+	geom_point(aes(x=Year, y=RW.modeled), ring.data.valles[is.na(ring.data.valles$RW),], size=0.5) +#
+	scale_y_continuous(limits=c(0,1.25)) +#
+	theme_bw()
+pdf("gamm_gapfill_valles.pdf", height=7.5, width=10)#
+ggplot() + facet_grid(spp~site) +#
+	geom_path(aes(x=Year, y=RW, color=spp), data=ring.data.valles, size=0.25) +#
+	geom_point(aes(x=Year, y=RW.modeled), ring.data.valles[is.na(ring.data.valles$RW),], size=0.5) +#
+	scale_y_continuous(limits=c(0,1.25)) +#
+	theme_bw()#
+dev.off()
+dim(ring.data.valles); dim(ring.data.mmf)#
+ring.data <- rbind(ring.data.valles, ring.data.mmf)#
+#
+# putting the modeled data where there are no ring widths (will cause negative dbh)#
+ring.data$RW.gapfilled <- ifelse(is.na(ring.data$RW), ring.data$RW.modeled, ring.data$RW)#
+summary(ring.data)
+ring.data$Year <- as.factor(ring.data$Year)#
+trees.gapfilled <- recast(ring.data[,c("Year", "TreeID", "RW.gapfilled")], Year ~ TreeID)#
+summary(trees.gapfilled)#
+trees.gapfilled[(nrow(trees.gapfilled)-10):nrow(trees.gapfilled), 1:10]
+tree.data <- read.csv("TreeData.csv")#
+summary(tree.data)#
+#
+# Site Data (for year cored) #
+site.data <- read.csv("input files/DOE_plus_valles.csv", na.strings="")#
+site.data$Year.sample <- as.numeric(substr(site.data$date.sample,7,10))#
+summary(site.data)#
+#
+# merging in the year sampled into the tree data & calculating age#
+tree.data <- merge(tree.data, site.data[,c("PlotID", "Year.sample")], all.x=T, all.y=F)#
+tree.data$Age <- tree.data$Year.sample - tree.data$Pith#
+summary(tree.data)
+# ----------------------------------------------------------------#
+# The spline doesn't fit outside the range of observed values, so we need to give it a "null" guess#
+# As a very very rough guess right now, filling missing with the measurement from the oldest ring#
+# 1) Create rough size-age relationships to give a narrow window of rings to fill (i.e. don't fill a 10 cm oak back to 1900 if our rings stop in 1980)#
+# 2) fill the modeling window with non-0 values... perhaps mean growth from last decade or past observed trend?#
+#
+# ---------------------------------------#
+# 1) Create rough size-age relationships to give a narrow window of rings to fill (i.e. don't fill a 10 cm oak back to 1900 if our rings stop in 1980)#
+# ---------------------------------------#
+# What we need: core summary data (DBH, estimated pith date)#
+#
+# Ignoring all the sites we don't have and doing some exploratory graphing#
+tree.data2 <- tree.data[tree.data$PlotID %in% unique(ring.data$PlotID),]#
+summary(tree.data2)#
+#
+# Need to remove species for which we have no pith estimates for the time being#
+spp.pith <- unique(tree.data2[!is.na(tree.data2$Pith), "spp"])#
+tree.data3 <- tree.data2[tree.data2$spp %in%  spp.pith,]#
+summary(tree.data3)#
+#
+qplot(dbh, Age, color=spp, data=tree.data3) + facet_wrap(~spp) +#
+	stat_smooth(method="lm", alpha=0.5, size=1.5) +#
+	theme_bw()#
+# Making a very basic linear model looking at site-specific species-dbh-age relationships#
+dbh.age <- lm(Age ~ spp*dbh*site-1, data=tree.data3)#
+summary(dbh.age)#
+summary(dbh.age)$r.squared # Note, this very basic model works pretty well!#
+#
+# Using the prediction interval to get us a higher upper bound#
+age.pi <- predict(dbh.age, newdata=tree.data3, interval="predict")#
+summary(age.pi)#
+dim(age.pi); dim(tree.data3) # Making sure we didn't lose any rows along the way#
+#
+tree.data3 <- cbind(tree.data3, age.pi)#
+summary(tree.data3)#
+#
+# Setting the filling window to the upper p.i. limit#
+tree.data3$fill.year <- ifelse(is.na(tree.data3$Pith), tree.data3$Year.sample-tree.data3$upr, tree.data3$Pith)#
+summary(tree.data3)#
+# Merging this back into a data frame that contains info for all the trees we're modeling right now#
+tree.data.model <- merge(tree.data3, tree.data2, all.x=T, all.y=T)#
+summary(tree.data.model)#
+#
+#--------------------- #
+# QUESTION: what to do about the species with no pith estimates?#
+#	For now, I'm just going to do a species-naive fit within each plot#
+#--------------------- #
+dbh.age.plot <- lm(Age ~ dbh*PlotID-1, data=tree.data.model)#
+summary(dbh.age.plot) #
+#
+age.pi.plot <- predict(dbh.age.plot, newdata= tree.data.model, interval="predict")#
+summary(age.pi.plot)#
+dim(age.pi.plot); dim(tree.data.model)#
+#
+summary(tree.data.model)#
+# Filling missing fill.year with one caluclated form age.pi.plot fill #
+tree.data.model[is.na(tree.data.model$fill.year),"fill.year"] <- tree.data.model[is.na(tree.data.model$fill.year),"Year.sample"] - age.pi.plot[which(is.na(tree.data.model$fill.year)),3]#
+summary(tree.data.model)#
+#---------------------
+# ---------------------------------------#
+# New Usage: delete NAs for years way outside what we think we should be fitting#
+# 2b) I still don't think we want to be fi#
+# ---------------------------------------#
+summary(tree.data.model)#
+summary(ring.data)#
+dim(ring.data)#
+#
+for(i in unique(ring.data$TreeID)){#
+	#------------------------------#
+	#year.fill = the oldest year to fill based on above step (prediction interval, size-species-site relationships)#
+	#------------------------------#
+	yr.fill <- tree.data.model[tree.data.model$TreeID==i,"fill.year"]#
+	#------------------------------#
+#
+	#------------------------------#
+	# The actual insertion of the dummy fil value into the fill range#
+	#------------------------------#
+	ring.data <- ring.data[!(ring.data$TreeID==i & ring.data$Year<yr.fill),]#
+	#------------------------------#
+}#
+summary(ring.data)#
+dim(ring.data)#
+# ---------------------------------------#
+# ----------------------------------------------------------------
+# Ring.data format: stack all of the core BAI, so that data frame with a SIGNLE BAI column, and then all of the factors in other columns#
+ring.data <- read.csv("TreeRWL_AllSites_stacked.csv")#
+ring.data$tree <- as.factor(ring.data$tree) #
+summary(ring.data)
+for(i in unique(ring.data$TreeID)){#
+	#------------------------------#
+	#year.fill = the oldest year to fill based on above step (prediction interval, size-species-site relationships)#
+	#------------------------------#
+	yr.fill <- tree.data.model[tree.data.model$TreeID==i,"fill.year"]#
+	#------------------------------#
+#
+	#------------------------------#
+	# The actual insertion of the dummy fil value into the fill range#
+	#------------------------------#
+	ring.data <- ring.data[!(ring.data$TreeID==i & ring.data$Year<yr.fill),]#
+	#------------------------------#
+}#
+summary(ring.data)#
+dim(ring.data)#
+# ---------------------------------------
+ring.data.mmf$RW.modeled <- exp(predict(gamm.mmf, ring.data.mmf))#
+summary(ring.data.mmf)
+ring.data.valles$RW.modeled <- exp(predict(gamm.valles, ring.data.valles))#
+summary(ring.data.valles)
+# Tree Data#
+tree.data <- read.csv("TreeData.csv")#
+summary(tree.data)#
+#
+# Site Data (for year cored) #
+site.data <- read.csv("input files/DOE_plus_valles.csv", na.strings="")#
+site.data$Year.sample <- as.numeric(substr(site.data$date.sample,7,10))#
+summary(site.data)#
+#
+# merging in the year sampled into the tree data & calculating age#
+tree.data <- merge(tree.data, site.data[,c("PlotID", "Year.sample")], all.x=T, all.y=F)#
+tree.data$Age <- tree.data$Year.sample - tree.data$Pith#
+summary(tree.data)
+# ---------------------------------------#
+# Data Formatting#
+# ---------------------------------------#
+# putting the sites back into 1 file#
+dim(ring.data.valles); dim(ring.data.mmf)#
+ring.data <- rbind(ring.data.valles, ring.data.mmf)#
+#
+# putting the modeled data where there are no ring widths (will cause negative dbh)#
+ring.data$RW.gapfilled <- ifelse(is.na(ring.data$RW), ring.data$RW.modeled, ring.data$RW)#
+summary(ring.data)#
+#
+# making a data frame with trees as columns and years as ros#
+ring.data$Year <- as.factor(ring.data$Year)#
+trees.gapfilled <- recast(ring.data[,c("Year", "TreeID", "RW.gapfilled")], Year ~ TreeID)#
+summary(trees.gapfilled)#
+trees.gapfilled[(nrow(trees.gapfilled)-10):nrow(trees.gapfilled), 1:10]#
+# ---------------------------------------
+summary(tree.data)
+trees.gapfilled <- trees.gapfilled[order(row.names(trees.gapfilled), decreasing=T),order(names(trees.gapfilled))]
+trees.gapfilled[1:10, 1:10]
+trees.gapfilled <- recast(ring.data[,c("Year", "TreeID", "RW.gapfilled")], Year ~ TreeID)#
+summary(trees.gapfilled)
+trees.gapfilled[(nrow(trees.gapfilled)-10):nrow(trees.gapfilled), 1:10]
+row.names(trees.gapfilled) <- trees.gapfilled$Year
+trees.gapfilled[(nrow(trees.gapfilled)-10):nrow(trees.gapfilled), 1:10]
+trees.gapfilled <- trees.gapfilled[,2:ncol(trees.gapfilled)]
+trees.gapfilled[(nrow(trees.gapfilled)-10):nrow(trees.gapfilled), 1:10]
+trees.gapfilled <- trees.gapfilled[order(row.names(trees.gapfilled), decreasing=T),order(names(trees.gapfilled))]
+trees.gapfilled[1:10, 1:10]
+summary(tree.data)
+trees.gapfilled[1:10, (ncol(trees.gapfilled)-10):ncol(trees.gapfilled)]
+dbh.recon <- trees.gapfilled
+names(dbh.recon)
+summary(tree.data)
+tree.data <- read.csv("tree_metadata_DOE_plus_valles.csv")
+summary(tree.data)
+tree_metadata_DOE_plus_valles.csv
+summary(core.data)
+row.names(trees.gapfilled)
+as.numeric(row.names(trees.gapfilled))
+summary(tree.data)
+tree.data <- read.csv("TreeData.csv")
+summary(tree.data)
+# Site Data (for year cored) #
+site.data <- read.csv("input files/DOE_plus_valles.csv", na.strings="")#
+site.data$Year.sample <- as.numeric(substr(site.data$date.sample,7,10))#
+summary(site.data)#
+#
+# merging in the year sampled into the tree data & calculating age#
+tree.data <- merge(tree.data, site.data[,c("PlotID", "Year.sample")], all.x=T, all.y=F)#
+tree.data$Age <- tree.data$Year.sample - tree.data$Pith#
+summary(tree.data)
+core.data <- read.csv("Core_data_DOE_summer_2014.csv", na.strings=c("", "NA", "#VALUE!", "*"), header=T)#
+#adding a column include which plot at the site the trees belong to#
+names(core.data)#
+core.data$plot <- substr(core.data$plot.id, 3, 3)#
+core.data$plot <- as.factor(core.data$plot)#
+summary(core.data)
+dbh.recon <- trees.gapfilled#
+for(j in names(dbh.recon)){#
+	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH recon); #
+	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0#
+	#	dbhrecon: fill year of sample with DBH when sampled#
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	trees.gapfilled[trees.gapfilled==1e-6,j] <- 0#
+#
+	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]#
+	for(i in 2:(length(dbh.recon[,j]))){#
+		dbh.recon[i,j] <- ifelse(!is.na(dbh.recon[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, NA) # subtracting the previous year's growth from DBH to get that year's DBH#
+  }#
+}
+j=names(dbh.recon)[1]
+j
+dbh.recon <- trees.gapfilled
+trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA
+trees.gapfilled[trees.gapfilled==1e-6,j] <- 0
+trees.gapfilled[trees.gapfilled[,j]==1e-6,j] <- 0
+dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA
+dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]
+for(i in 2:(length(dbh.recon[,j]))){#
+		dbh.recon[i,j] <- ifelse(!is.na(dbh.recon[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, NA) # subtracting the previous year's growth from DBH to get that year's DBH#
+	}
+dbh.recon[i,j]
+dbh.recon[,j]
+dbh.recon <- trees.gapfilled#
+for(j in names(dbh.recon)){#
+	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH recon); #
+	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0#
+	#	dbhrecon: fill year of sample with DBH when sampled#
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	trees.gapfilled[trees.gapfilled[,j]==1e-6,j] <- 0#
+#
+	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]#
+	for(i in 2:(length(dbh.recon[,j]))){#
+		dbh.recon[i,j] <- ifelse(!is.na(dbh.recon[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, NA) # subtracting the previous year's growth from DBH to get that year's DBH#
+	}#
+}
+j
+trees.gapfilled[trees.gapfilled[,j]==1e-6,j] <- 0
+trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])
+dbh.recon <- trees.gapfilled#
+for(j in names(dbh.recon)){#
+	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH recon); #
+	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0#
+	#	dbhrecon: fill year of sample with DBH when sampled#
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])#
+#
+	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]#
+	for(i in 2:(length(dbh.recon[,j]))){#
+		dbh.recon[i,j] <- ifelse(!is.na(dbh.recon[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, NA) # subtracting the previous year's growth from DBH to get that year's DBH#
+	}#
+}
+dbh.recon[1:20, 1:10]
+dbh.recon[1:20, (ncol(dbh.recon)-10):ncol(dbh.recon)]
+dbh.recon[1:20, (ncol(dbh.recon)-20):ncol(dbh.recon)]
+trees.gapfilled[1:10, (ncol(trees.gapfilled)-10):ncol(trees.gapfilled)]
+dbh.recon <- trees.gapfilled#
+for(j in names(dbh.recon)){#
+	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH recon); #
+	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0#
+	#	dbhrecon: fill year of sample with DBH when sampled#
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])#
+#
+	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]#
+	for(i in 2:(length(dbh.recon[,j]))){#
+		dbh.recon[i,j] <- ifelse(!is.na(trees.gapfilled[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, NA) # subtracting the previous year's growth from DBH to get that year's DBH#
+	}#
+}#
+dbh.recon[1:20, 1:10]#
+dbh.recon[1:20, (ncol(dbh.recon)-20):ncol(dbh.recon)]
+dbh.recon <- trees.gapfilled
+dbh.recon[1:20, (ncol(dbh.recon)-20):ncol(dbh.recon)]
+dbh.recon <- trees.gapfilled#
+for(j in names(dbh.recon)){#
+	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH recon); #
+	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0#
+	#	dbhrecon: fill year of sample with DBH when sampled#
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])#
+#
+	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]#
+	# for(i in 2:(length(dbh.recon[,j]))){#
+		# dbh.recon[i,j] <- ifelse(!is.na(trees.gapfilled[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, NA) # subtracting the previous year's growth from DBH to get that year's DBH#
+	# }#
+}#
+dbh.recon[1:20, 1:10]#
+dbh.recon[1:20, (ncol(dbh.recon)-20):ncol(dbh.recon)]
+dbh.recon <- trees.gapfilled#
+for(j in names(dbh.recon)){#
+	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH recon); #
+	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0#
+	#	dbhrecon: fill year of sample with DBH when sampled#
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])#
+#
+	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]#
+	for(i in 2:(length(dbh.recon[,j]))){#
+		dbh.recon[i,j] <- ifelse(!is.na(trees.gapfilled[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, dbh.recon[i,j]) # subtracting the previous year's growth from DBH to get that year's DBH#
+	}#
+}#
+dbh.recon[1:20, 1:10]#
+dbh.recon[1:20, (ncol(dbh.recon)-20):ncol(dbh.recon)]
+min(dbh.recon, na.rm=T)
+summary(tree.data)
+dbh.recon <- trees.gapfilled#
+for(j in names(dbh.recon)){#
+	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH recon); #
+	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0#
+	#	dbhrecon: fill year of sample with DBH when sampled#
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])#
+#
+	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]#
+	# Doing the DBH reconstruction	#
+	for(i in 2:(length(dbh.recon[,j]))){#
+		dbh.recon[i,j] <- ifelse(!is.na(trees.gapfilled[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, dbh.recon[i,j]) # subtracting the previous year's growth from DBH to get that year's DBH#
+	}#
+	# Get rid of dbh past the guestimated pith dates #
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+#
+	# Get rid of negative modeled dbh#
+	if(is.na(tree.data[tree.data$TreeID==j, "Pith"],j])){#
+		if(trees.gapfilled[,j] < 0, NA) #
+	}#
+#
+}#
+dbh.recon[1:20, 1:10]#
+dbh.recon[1:20, (ncol(dbh.recon)-20):ncol(dbh.recon)]
+dbh.recon <- trees.gapfilled#
+for(j in names(dbh.recon)){#
+	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH recon); #
+	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0#
+	#	dbhrecon: fill year of sample with DBH when sampled#
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])#
+#
+	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]#
+	# Doing the DBH reconstruction	#
+	for(i in 2:(length(dbh.recon[,j]))){#
+		dbh.recon[i,j] <- ifelse(!is.na(trees.gapfilled[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, dbh.recon[i,j]) # subtracting the previous year's growth from DBH to get that year's DBH#
+	}#
+	# Get rid of dbh past the guestimated pith dates #
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+#
+	# Get rid of negative modeled dbh#
+	if(is.na(tree.data[tree.data$TreeID==j, "Pith"],j])){#
+		trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]<0, NA, trees.gapfilled[,j]) #
+	}#
+}
+dbh.recon <- trees.gapfilled#
+for(j in names(dbh.recon)){#
+	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH recon); #
+	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0#
+	#	dbhrecon: fill year of sample with DBH when sampled#
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])#
+#
+	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]#
+	# Doing the DBH reconstruction	#
+	for(i in 2:(length(dbh.recon[,j]))){#
+		dbh.recon[i,j] <- ifelse(!is.na(trees.gapfilled[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, dbh.recon[i,j]) # subtracting the previous year's growth from DBH to get that year's DBH#
+	}#
+	# Get rid of dbh past the guestimated pith dates #
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+#
+	# Get rid of negative modeled dbh#
+	if(is.na(tree.data[tree.data$TreeID==j, "Pith"])){#
+		trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]<0, NA, trees.gapfilled[,j]) #
+	}#
+}
+dbh.recon <- trees.gapfilled#
+for(j in names(dbh.recon)){#
+	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH recon); #
+	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0#
+	#	dbhrecon: fill year of sample with DBH when sampled#
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])#
+#
+	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]#
+	# Doing the DBH reconstruction	#
+	for(i in 2:(length(dbh.recon[,j]))){#
+		dbh.recon[i,j] <- ifelse(!is.na(trees.gapfilled[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, dbh.recon[i,j]) # subtracting the previous year's growth from DBH to get that year's DBH#
+	}#
+	# Get rid of dbh past the guestimated pith dates #
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+#
+	# Get rid of negative modeled dbh#
+	# if(is.na(tree.data[tree.data$TreeID==j, "Pith"])){#
+		# trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]<0, NA, trees.gapfilled[,j]) #
+	# }#
+}
+dbh.recon <- trees.gapfilled#
+for(j in names(dbh.recon)){#
+	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH recon); #
+	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0#
+	#	dbhrecon: fill year of sample with DBH when sampled#
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])#
+#
+	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]#
+	# Doing the DBH reconstruction	#
+	for(i in 2:(length(dbh.recon[,j]))){#
+		dbh.recon[i,j] <- ifelse(!is.na(trees.gapfilled[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, dbh.recon[i,j]) # subtracting the previous year's growth from DBH to get that year's DBH#
+	}#
+	# Get rid of dbh past the guestimated pith dates #
+	# trees.gapfilled[as.numeric(row.names(trees.gapfilled))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+#
+	# Get rid of negative modeled dbh#
+	# if(is.na(tree.data[tree.data$TreeID==j, "Pith"])){#
+		# trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]<0, NA, trees.gapfilled[,j]) #
+	# }#
+}
+tree.data[tree.data$TreeID==j, "Pith"]
+dbh.recon <- trees.gapfilled#
+for(j in names(dbh.recon)){#
+	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH recon); #
+	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0#
+	#	dbhrecon: fill year of sample with DBH when sampled#
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])#
+#
+	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]#
+	# Doing the DBH reconstruction	#
+	for(i in 2:(length(dbh.recon[,j]))){#
+		dbh.recon[i,j] <- ifelse(!is.na(trees.gapfilled[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, dbh.recon[i,j]) # subtracting the previous year's growth from DBH to get that year's DBH#
+	}#
+	# Get rid of dbh past the guestimated pith dates #
+	if(!is.na(tree.data[tree.data$TreeID==j, "Pith"])){#
+		trees.gapfilled[as.numeric(row.names(trees.gapfilled))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+	} else if(is.na(tree.data[tree.data$TreeID==j, "Pith"])){ # Get rid of negative modeled dbh#
+		trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]<0, NA, trees.gapfilled[,j]) #
+	}#
+}
+dbh.recon[1:20, 1:10]
+dbh.recon[1:20, (ncol(dbh.recon)-20):ncol(dbh.recon)]
+min(dbh.recon, na.rm=T)
+# putting the sites back into 1 file#
+dim(ring.data.valles); dim(ring.data.mmf)#
+ring.data <- rbind(ring.data.valles, ring.data.mmf)#
+#
+# putting the modeled data where there are no ring widths (will cause negative dbh)#
+ring.data$RW.gapfilled <- ifelse(is.na(ring.data$RW), ring.data$RW.modeled, ring.data$RW)#
+summary(ring.data)#
+#
+# making a data frame with trees as columns and years as ros#
+ring.data$Year <- as.factor(ring.data$Year)#
+trees.gapfilled <- recast(ring.data[,c("Year", "TreeID", "RW.gapfilled")], Year ~ TreeID)#
+summary(trees.gapfilled)#
+#
+row.names(trees.gapfilled) <- trees.gapfilled$Year#
+trees.gapfilled <- trees.gapfilled[,2:ncol(trees.gapfilled)]#
+trees.gapfilled[(nrow(trees.gapfilled)-10):nrow(trees.gapfilled), 1:10]
+dbh.recon <- trees.gapfilled#
+for(j in names(dbh.recon)){#
+	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH recon); #
+	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0#
+	#	dbhrecon: fill year of sample with DBH when sampled#
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])#
+#
+	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]#
+	# Doing the DBH reconstruction	#
+	for(i in 2:(length(dbh.recon[,j]))){#
+		dbh.recon[i,j] <- ifelse(!is.na(trees.gapfilled[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, dbh.recon[i,j]) # subtracting the previous year's growth from DBH to get that year's DBH#
+	}#
+	# Get rid of dbh past the guestimated pith dates -- both dbh recon & gapfilled#
+	if(!is.na(tree.data[tree.data$TreeID==j, "Pith"])){#
+		dbh.recon[as.numeric(row.names(dbh.recon))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+		trees.gapfilled[as.numeric(row.names(trees.gapfilled))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+	} else if(is.na(tree.data[tree.data$TreeID==j, "Pith"])){ # Get rid of negative modeled dbh#
+		dbh.recon[,j] <- ifelse(dbh.recon[,j]<0, NA, dbh.recon[,j]) #
+		trees.gapfilled[,j] <- ifelse(dbh.recon[,j]<0, NA, trees.gapfilled[,j]) #
+	}#
+}#
+dbh.recon[1:20, 1:10]#
+dbh.recon[1:20, (ncol(dbh.recon)-20):ncol(dbh.recon)]#
+min(dbh.recon, na.rm=T)
+# ---------------------------------------#
+# Data Formatting#
+# ---------------------------------------#
+# putting the sites back into 1 file#
+dim(ring.data.valles); dim(ring.data.mmf)#
+ring.data <- rbind(ring.data.valles, ring.data.mmf)#
+#
+# putting the modeled data where there are no ring widths (will cause negative dbh)#
+ring.data$RW.gapfilled <- ifelse(is.na(ring.data$RW), ring.data$RW.modeled, ring.data$RW)#
+summary(ring.data)#
+#
+# making a data frame with trees as columns and years as ros#
+ring.data$Year <- as.factor(ring.data$Year)#
+trees.gapfilled <- recast(ring.data[,c("Year", "TreeID", "RW.gapfilled")], Year ~ TreeID)#
+summary(trees.gapfilled)#
+#
+row.names(trees.gapfilled) <- trees.gapfilled$Year#
+trees.gapfilled <- trees.gapfilled[,2:ncol(trees.gapfilled)]#
+trees.gapfilled[(nrow(trees.gapfilled)-10):nrow(trees.gapfilled), 1:10]#
+# ---------------------------------------#
+#
+# ---------------------------------------#
+# DBH Reconstruction#
+# ---------------------------------------#
+# Tree Data#
+tree.data <- read.csv("TreeData.csv")#
+summary(tree.data)#
+#
+# Site Data (for year cored) #
+site.data <- read.csv("input files/DOE_plus_valles.csv", na.strings="")#
+site.data$Year.sample <- as.numeric(substr(site.data$date.sample,7,10))#
+summary(site.data)#
+#
+# merging in the year sampled into the tree data & calculating age#
+tree.data <- merge(tree.data, site.data[,c("PlotID", "Year.sample")], all.x=T, all.y=F)#
+tree.data$Age <- tree.data$Year.sample - tree.data$Pith#
+summary(tree.data)#
+#
+core.data <- read.csv("Core_data_DOE_summer_2014.csv", na.strings=c("", "NA", "#VALUE!", "*"), header=T)#
+#adding a column include which plot at the site the trees belong to#
+names(core.data)#
+core.data$plot <- substr(core.data$plot.id, 3, 3)#
+core.data$plot <- as.factor(core.data$plot)#
+summary(core.data)#
+#
+# Ordering the data#
+trees.gapfilled <- trees.gapfilled[order(row.names(trees.gapfilled), decreasing=T),order(names(trees.gapfilled))]#
+trees.gapfilled[1:10, 1:10]#
+trees.gapfilled[1:10, (ncol(trees.gapfilled)-10):ncol(trees.gapfilled)]
+dbh.recon <- trees.gapfilled
+dbh.recon <- trees.gapfilled#
+for(j in names(dbh.recon)){#
+	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH recon); #
+	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0#
+	#	dbhrecon: fill year of sample with DBH when sampled#
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])#
+#
+	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]#
+	# Doing the DBH reconstruction	#
+	for(i in 2:(length(dbh.recon[,j]))){#
+		dbh.recon[i,j] <- ifelse(!is.na(trees.gapfilled[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, dbh.recon[i,j]) # subtracting the previous year's growth from DBH to get that year's DBH#
+	}#
+	# Get rid of dbh past the guestimated pith dates -- both dbh recon & gapfilled#
+	if(!is.na(tree.data[tree.data$TreeID==j, "Pith"])){#
+		dbh.recon[as.numeric(row.names(dbh.recon))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+		trees.gapfilled[as.numeric(row.names(trees.gapfilled))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+	} else if(is.na(tree.data[tree.data$TreeID==j, "Pith"])){ # Get rid of negative modeled dbh#
+		dbh.recon[,j] <- ifelse(dbh.recon[,j]<0, NA, dbh.recon[,j]) #
+		trees.gapfilled[,j] <- ifelse(dbh.recon[,j]<0, NA, trees.gapfilled[,j]) #
+	}#
+}
+dbh.recon[1:20, 1:10]#
+dbh.recon[1:20, (ncol(dbh.recon)-20):ncol(dbh.recon)]
+min(dbh.recon, na.rm=T)
+summary(dbh.recon[,min(dbh.recon, na.rm=T)])
+summary(dbh.recon[,which(min(dbh.recon, na.rm=T))])
+summary(dbh.recon[,which(min(dbh.recon, na.rm=T)<0)])
+which(min(dbh.recon, na.rm=T)<0)
+summary(dbh.recon[,1:10])
+summary(dbh.recon[,which(dbh.recon<0, na.rm=T)])
+summary(dbh.recon[,which(min(dbh.recon<0, na.rm=T))])
+for(j in names(dbh.recon)){#
+	if(min(dbh.recon[,j], na.rm=T)<0){#
+			dbh.recon[nrow(dbh.recon),j] <- trees.gapfilled[nrow(trees.gapfilled),j]#
+		for(i in (nrow(dbh.recon[,j]-1):1)){#
+			dbh.recon[i,j] <- sum(trees.gapfilled[(i-1):i,j], na.rm=T)#
+		}#
+	}#
+}
+min(dbh.recon, na.rm=T)
+j
+for(j in names(dbh.recon)){#
+	if(min(dbh.recon[,j], na.rm=T)<0){#
+			dbh.recon[nrow(dbh.recon),j] <- trees.gapfilled[nrow(trees.gapfilled),j]#
+		for(i in (nrow(dbh.recon[,j]-1):1)){#
+			if(!is.na(dbh.recon[i,j]) & !is.na(dbh.recon[i-1,j])){#
+				dbh.recon[i,j] <- sum(trees.gapfilled[(i-1):i,j], na.rm=T) }#
+		}#
+	}#
+}
+j
+min(dbh.recon[,j], na.rm=T)<0
+dbh.recon[,j]
+for(j in names(dbh.recon)){#
+	if(min(dbh.recon[,j], na.rm=T)<0){#
+			dbh.recon[nrow(dbh.recon),j] <- trees.gapfilled[nrow(trees.gapfilled),j]#
+		for(i in (nrow(dbh.recon[,j]-1):1)){#
+			if(!is.na(dbh.recon[i,j]) & !is.na(dbh.recon[i+1,j])){#
+				dbh.recon[i,j] <- sum(trees.gapfilled[(i+1):i,j], na.rm=T) }#
+		}#
+	}#
+}
+nrow(dbh.recon[,j]
+dbh.recon[1:20, 1:10]#
+dbh.recon[1:20, (ncol(dbh.recon)-20):ncol(dbh.recon)]
+min(dbh.recon, na.rm=T)
+for(j in names(dbh.recon)){#
+	if(min(dbh.recon[,j], na.rm=T)<0){#
+			dbh.recon[nrow(dbh.recon),j] <- trees.gapfilled[nrow(trees.gapfilled),j]#
+		for(i in (nrow(dbh.recon[,j])-1):1)){#
+			if(!is.na(dbh.recon[i,j]) & !is.na(dbh.recon[i+1,j])){#
+				dbh.recon[i,j] <- sum(trees.gapfilled[(i+1):i,j], na.rm=T) }#
+		}#
+	}#
+}
+for(j in names(dbh.recon)){#
+	if(min(dbh.recon[,j], na.rm=T)<0){#
+			dbh.recon[nrow(dbh.recon),j] <- trees.gapfilled[nrow(trees.gapfilled),j]#
+		for(i in (nrow(dbh.recon[,j])-1):1){#
+			if(!is.na(dbh.recon[i,j]) & !is.na(dbh.recon[i+1,j])){#
+				dbh.recon[i,j] <- sum(trees.gapfilled[(i+1):i,j], na.rm=T) }#
+		}#
+	}#
+}
+j
+nrow(dbh.recon[,j]
+)
+for(j in names(dbh.recon)){#
+	if(min(dbh.recon[,j], na.rm=T)<0){#
+			dbh.recon[nrow(dbh.recon),j] <- trees.gapfilled[nrow(trees.gapfilled),j]#
+		for(i in (nrow(dbh.recon)-1):1){#
+			if(!is.na(dbh.recon[i,j]) & !is.na(dbh.recon[i+1,j])){#
+				dbh.recon[i,j] <- sum(trees.gapfilled[(i+1):i,j], na.rm=T) }#
+		}#
+	}#
+}
+j
+sum(36, 24)
+sum(36, 24, NA, na.rm=T)
+trees.inout <- vector()#
+for(j in names(dbh.recon)){#
+	if(min(dbh.recon[,j], na.rm=T)<0){#
+		trees.inout <- c(trees.inout, j)#
+		dbh.recon[,j] <- trees.gapfilled[,j]#
+		for(i in (nrow(dbh.recon)-1):1){#
+			dbh.recon[i,j] <- sum(dbh.recon[i+1, j], trees.gapfilled[i,j], na.rm=T)#
+		}#
+	}#
+}#
+min(dbh.recon, na.rm=T)
+trees.inout
+summary(dbh.recon[,trees.inout])
+dbh.recon[1:10,trees.inout]
+tree.data[tree.data$TreeID %in% trees.inout,]
+dbh.recon <- trees.gapfilled#
+for(j in names(dbh.recon)){#
+	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH recon); #
+	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0#
+	#	dbhrecon: fill year of sample with DBH when sampled#
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])#
+#
+	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]#
+	# Doing the DBH reconstruction	#
+	for(i in 2:(length(dbh.recon[,j]))){#
+		dbh.recon[i,j] <- ifelse(!is.na(trees.gapfilled[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, dbh.recon[i,j]) # subtracting the previous year's growth from DBH to get that year's DBH#
+	}#
+	# Get rid of dbh past the guestimated pith dates -- both dbh recon & gapfilled#
+	if(!is.na(tree.data[tree.data$TreeID==j, "Pith"])){#
+		dbh.recon[as.numeric(row.names(dbh.recon))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+		trees.gapfilled[as.numeric(row.names(trees.gapfilled))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+	} else if(is.na(tree.data[tree.data$TreeID==j, "Pith"])){ # Get rid of negative modeled dbh#
+		dbh.recon[,j] <- ifelse(dbh.recon[,j]<0, NA, dbh.recon[,j]) #
+		trees.gapfilled[,j] <- ifelse(dbh.recon[,j]<0, NA, trees.gapfilled[,j]) #
+	}#
+#
+}#
+dbh.recon[1:20, 1:10]#
+dbh.recon[1:20, (ncol(dbh.recon)-20):ncol(dbh.recon)]
+summary(dbh.recon[,trees.inout])
+tree.data[tree.data$TreeID %in% trees.inout,]
+dbh.recon[,trees.inout]
+tree.gapfilled[,trees.inout]
+trees.gapfilled[,trees.inout]
+trees.inout
+j="VUF134"
+min(dbh.recon[,j], na.rm=T)<0
+(nrow(dbh.recon)-1):1
+i=111
+sum(dbh.recon[i+1, j], trees.gapfilled[i,j], na.rm=T)
+test <- trees.gapfilled[,j]
+test
+for(i in (nrow(dbh.recon)-1):1){#
+#			dbh.recon[i,j] <- sum(dbh.recon[i+1, j], trees.gapfilled[i,j], na.rm=T)#
+			test[i,j] <- sum(test[i+1], trees.gapfilled[i,j], na.rm=T)#
+			}
+for(i in (nrow(dbh.recon)-1):1){#
+#			dbh.recon[i,j] <- sum(dbh.recon[i+1, j], trees.gapfilled[i,j], na.rm=T)#
+			test[i] <- sum(test[i+1], trees.gapfilled[i,j], na.rm=T)#
+			}
+dbh.recon[,j]
+test
+test <- trees.gapfilled[,j]
+sum(test, na.rm=T)
+dbh.recon <- trees.gapfilled#
+for(j in names(dbh.recon)){#
+	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH recon); #
+	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0#
+	#	dbhrecon: fill year of sample with DBH when sampled#
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])#
+#
+	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]#
+	# Doing the DBH reconstruction	#
+	for(i in 2:(length(dbh.recon[,j]))){#
+		dbh.recon[i,j] <- ifelse(!is.na(trees.gapfilled[i-1,j]) & !is.na(trees.gapfilled[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, dbh.recon[i,j]) # subtracting the previous year's growth from DBH to get that year's DBH#
+	}#
+	# Get rid of dbh past the guestimated pith dates -- both dbh recon & gapfilled#
+	if(!is.na(tree.data[tree.data$TreeID==j, "Pith"])){#
+		dbh.recon[as.numeric(row.names(dbh.recon))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+		trees.gapfilled[as.numeric(row.names(trees.gapfilled))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+	} else if(is.na(tree.data[tree.data$TreeID==j, "Pith"])){ # Get rid of negative modeled dbh#
+		dbh.recon[,j] <- ifelse(dbh.recon[,j]<0, NA, dbh.recon[,j]) #
+		trees.gapfilled[,j] <- ifelse(dbh.recon[,j]<0, NA, trees.gapfilled[,j]) #
+	}#
+#
+}#
+dbh.recon[1:20, 1:10]#
+dbh.recon[1:20, (ncol(dbh.recon)-20):ncol(dbh.recon)]
+min(dbh.recon, na.rm=T)
+dbh.recon <- trees.gapfilled#
+trees.check <- vector() # trees with negative dbh#
+for(j in names(dbh.recon)){#
+	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH recon); #
+	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0#
+	#	dbhrecon: fill year of sample with DBH when sampled#
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])#
+#
+	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]#
+	# Doing the DBH reconstruction	#
+	for(i in 2:(length(dbh.recon[,j]))){#
+		dbh.recon[i,j] <- ifelse(!is.na(trees.gapfilled[i-1,j]) & !is.na(trees.gapfilled[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, dbh.recon[i,j]) # subtracting the previous year's growth from DBH to get that year's DBH#
+	}#
+	# Get rid of dbh past the guestimated pith dates -- both dbh recon & gapfilled#
+	if(!is.na(tree.data[tree.data$TreeID==j, "Pith"])){#
+		dbh.recon[as.numeric(row.names(dbh.recon))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+		trees.gapfilled[as.numeric(row.names(trees.gapfilled))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+	} else if(is.na(tree.data[tree.data$TreeID==j, "Pith"])){ # Get rid of negative modeled dbh#
+		dbh.recon[,j] <- ifelse(dbh.recon[,j]<0, NA, dbh.recon[,j]) #
+		trees.gapfilled[,j] <- ifelse(dbh.recon[,j]<0, NA, trees.gapfilled[,j]) #
+	}#
+	if(min(dbh.recon[,j], na.rm=T)<0) trees.check <- c(trees.check, j)#
+}
+trees.check
+dbh.recon <- trees.gapfilled#
+trees.check <- vector() # trees with negative dbh#
+for(j in names(dbh.recon)){#
+	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH recon); #
+	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0#
+	#	dbhrecon: fill year of sample with DBH when sampled#
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])#
+#
+	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]#
+	# Doing the DBH reconstruction	#
+	for(i in 2:(length(dbh.recon[,j]))){#
+		dbh.recon[i,j] <- ifelse(!is.na(trees.gapfilled[i-1,j]) & !is.na(trees.gapfilled[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, dbh.recon[i,j]) # subtracting the previous year's growth from DBH to get that year's DBH#
+	}#
+	# # Get rid of dbh past the guestimated pith dates -- both dbh recon & gapfilled#
+	# if(!is.na(tree.data[tree.data$TreeID==j, "Pith"])){#
+		# dbh.recon[as.numeric(row.names(dbh.recon))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+		# trees.gapfilled[as.numeric(row.names(trees.gapfilled))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+	# } else if(is.na(tree.data[tree.data$TreeID==j, "Pith"])){ # Get rid of negative modeled dbh#
+		# dbh.recon[,j] <- ifelse(dbh.recon[,j]<0, NA, dbh.recon[,j]) #
+		# trees.gapfilled[,j] <- ifelse(dbh.recon[,j]<0, NA, trees.gapfilled[,j]) #
+	# }#
+	if(min(dbh.recon[,j], na.rm=T)<0) trees.check <- c(trees.check, j)#
+}#
+dbh.recon[1:20, 1:10]#
+dbh.recon[1:20, (ncol(dbh.recon)-20):ncol(dbh.recon)]#
+min(dbh.recon, na.rm=T)
+trees.check
+dbh.recon <- trees.gapfilled#
+trees.check <- vector() # trees with negative dbh#
+for(j in names(dbh.recon)){#
+	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH recon); #
+	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0#
+	#	dbhrecon: fill year of sample with DBH when sampled#
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])#
+#
+	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]#
+	# Doing the DBH reconstruction	#
+	for(i in 2:(length(dbh.recon[,j]))){#
+		dbh.recon[i,j] <- ifelse(!is.na(trees.gapfilled[i-1,j]) & !is.na(trees.gapfilled[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, dbh.recon[i,j]) # subtracting the previous year's growth from DBH to get that year's DBH#
+	}#
+	# # Get rid of dbh past the guestimated pith dates -- both dbh recon & gapfilled#
+	# if(!is.na(tree.data[tree.data$TreeID==j, "Pith"])){#
+		# dbh.recon[as.numeric(row.names(dbh.recon))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+		# trees.gapfilled[as.numeric(row.names(trees.gapfilled))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+	# } else #
+	if(is.na(tree.data[tree.data$TreeID==j, "Pith"])){ # Get rid of negative modeled dbh#
+		dbh.recon[,j] <- ifelse(dbh.recon[,j]<0, NA, dbh.recon[,j]) #
+		trees.gapfilled[,j] <- ifelse(dbh.recon[,j]<0, NA, trees.gapfilled[,j]) #
+	}#
+	if(min(dbh.recon[,j], na.rm=T)<0) trees.check <- c(trees.check, j)#
+}
+min(dbh.recon, na.rm=T)
+trees.check
+sum(trees.gapfilled[,trees.check[1]])
+sum(trees.gapfilled[,trees.check[1]], na.rm=T)
+sum(trees.gapfilled[,trees.check[2]], na.rm=T)
+tree.data[tree.data$TreeID==trees.check[1],]
+dbh.recon <- trees.gapfilled#
+trees.check <- vector() # trees with negative dbh#
+for(j in names(dbh.recon)){#
+	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH recon); #
+	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0#
+	#	dbhrecon: fill year of sample with DBH when sampled#
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])#
+#
+	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]
+}
+dbh.recon[,trees.check[1]]
+trees.check[1]
+dbh.recon[,"MMA026"]
+j="MMA026"
+!is.na(trees.gapfilled[i-1,j])
+i=2
+!is.na(trees.gapfilled[i-1,j])
+dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2
+for(j in names(dbh.recon)){#
+	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH recon); #
+	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0#
+	#	dbhrecon: fill year of sample with DBH when sampled#
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])#
+#
+	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]#
+	# Doing the DBH reconstruction	#
+	for(i in 2:(length(dbh.recon[,j]))){#
+		dbh.recon[i,j] <- ifelse(!is.na(trees.gapfilled[i-1,j]) & !is.na(trees.gapfilled[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, dbh.recon[i,j]) # subtracting the previous year's growth from DBH to get that year's DBH#
+	}#
+	# Get rid of dbh past the guestimated pith dates -- both dbh recon & gapfilled#
+	if(!is.na(tree.data[tree.data$TreeID==j, "Pith"])){#
+		dbh.recon[as.numeric(row.names(dbh.recon))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+		trees.gapfilled[as.numeric(row.names(trees.gapfilled))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+	} else #
+	if(is.na(tree.data[tree.data$TreeID==j, "Pith"])){ # Get rid of negative modeled dbh#
+		dbh.recon[,j] <- ifelse(dbh.recon[,j]<0, NA, dbh.recon[,j]) #
+		trees.gapfilled[,j] <- ifelse(dbh.recon[,j]<0, NA, trees.gapfilled[,j]) #
+	}#
+	if(min(dbh.recon[,j], na.rm=T)<0) trees.check <- c(trees.check, j)#
+}
+dbh.recon[,"MMA026"]
+sum(trees.gapfilled[,"MMA026"], na.rm=T)
+trees.gapfilled[,"MMA026"]
+j="MMA026"
+tree.data[tree.data$TreeID==j, "dbh"]
+dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]
+dbh.recon[,j]
+dbh.recon <- trees.gapfilled#
+trees.check <- vector() # trees with negative dbh#
+for(j in names(dbh.recon)){#
+	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH recon); #
+	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0#
+	#	dbhrecon: fill year of sample with DBH when sampled#
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])#
+#
+	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]#
+	# Doing the DBH reconstruction	#
+	for(i in 2:(length(dbh.recon[,j]))){#
+		dbh.recon[i,j] <- ifelse(!is.na(trees.gapfilled[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, dbh.recon[i,j]) # subtracting the previous year's growth from DBH to get that year's DBH#
+	}#
+	# Get rid of dbh past the guestimated pith dates -- both dbh recon & gapfilled#
+	if(!is.na(tree.data[tree.data$TreeID==j, "Pith"])){#
+		dbh.recon[as.numeric(row.names(dbh.recon))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+		trees.gapfilled[as.numeric(row.names(trees.gapfilled))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+	} else #
+	if(is.na(tree.data[tree.data$TreeID==j, "Pith"])){ # Get rid of negative modeled dbh#
+		dbh.recon[,j] <- ifelse(dbh.recon[,j]<0, NA, dbh.recon[,j]) #
+		trees.gapfilled[,j] <- ifelse(dbh.recon[,j]<0, NA, trees.gapfilled[,j]) #
+	}#
+	if(min(dbh.recon[,j], na.rm=T)<0) trees.check <- c(trees.check, j)#
+}#
+dbh.recon[1:20, 1:10]#
+dbh.recon[1:20, (ncol(dbh.recon)-20):ncol(dbh.recon)]#
+min(dbh.recon, na.rm=T)
+summary(dbh.recon[,trees.check])
+for(j in trees.check){#
+	if(min(dbh.recon[,j], na.rm=T)<0){#
+		dbh.recon[,j] <- trees.gapfilled[,j]#
+		for(i in (nrow(dbh.recon)-1):1){#
+			dbh.recon[i,j] <- sum(dbh.recon[i+1, j], trees.gapfilled[i,j]*2, na.rm=T)#
+			}#
+	}#
+}#
+min(dbh.recon, na.rm=T)
+dbh.recon[1:10,trees.inout]
+summary(dbh.recon[, trees.check])
+tree.data[tree.data$TreeID %in% trees.check,]
+write.csv(dbh.recon, "gap_filled_dbh.recon.csv", row.names=T)
+write.csv(trees.gapfilled, "gap_filled_ring.widths.csv", row.names=T)
+trees.gapfilled[,j]
+which(is.na(trees.gapfilled[,j]))
+years.na <- as.numeric(row.names(which(is.na(trees.gapfilled[,j]))))
+years.na
+years.na <- row.names(trees.gapfilled[which(is.na(trees.gapfilled[,j]))])
+years.na
+years.na <- as.numeric(row.names(trees.gapfilled[which(is.na(trees.gapfilled[,j]))]))
+years.na
+summar(ring.data)
+summary(ring.data)
+dbh.recon <- trees.gapfilled#
+trees.check <- vector() # trees with negative dbh#
+for(j in names(dbh.recon)){#
+	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH recon); #
+	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0#
+	#	dbhrecon: fill year of sample with DBH when sampled#
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])#
+#
+	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]#
+	# Doing the DBH reconstruction	#
+	for(i in 2:(length(dbh.recon[,j]))){#
+		dbh.recon[i,j] <- ifelse(!is.na(trees.gapfilled[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, dbh.recon[i,j]) # subtracting the previous year's growth from DBH to get that year's DBH#
+	}#
+	# Get rid of dbh past the guestimated pith dates -- both dbh recon & gapfilled#
+	if(!is.na(tree.data[tree.data$TreeID==j, "Pith"])){#
+		dbh.recon[as.numeric(row.names(dbh.recon))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+		trees.gapfilled[as.numeric(row.names(trees.gapfilled))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+	} else #
+	if(is.na(tree.data[tree.data$TreeID==j, "Pith"])){ # Get rid of negative modeled dbh#
+		dbh.recon[,j] <- ifelse(dbh.recon[,j]<0, NA, dbh.recon[,j]) #
+		trees.gapfilled[,j] <- ifelse(dbh.recon[,j]<0, NA, trees.gapfilled[,j]) #
+		# also getting rid of these rings in the stacked ring data too#
+		years.na <- row.names(trees.gapfilled[which(is.na(trees.gapfilled[,j]))])#
+		ring.data[ring.data$TreeID==j & ring.data$Year %in% years.na,"RW.gapfilled"] <- NA#
+	}#
+	if(min(dbh.recon[,j], na.rm=T)<0) trees.check <- c(trees.check, j)#
+}#
+dbh.recon[1:20, 1:10]#
+dbh.recon[1:20, (ncol(dbh.recon)-20):ncol(dbh.recon)]#
+min(dbh.recon, na.rm=T)#
+trees.check#
+summary(dbh.recon[,trees.check])#
+#
+# for trees with negative dbh, working from the inside out#
+	# If a tree has a negative DBH, we're just going to add from the inside out (at time )#
+for(j in trees.check){#
+	if(min(dbh.recon[,j], na.rm=T)<0){#
+		dbh.recon[,j] <- trees.gapfilled[,j]#
+		for(i in (nrow(dbh.recon)-1):1){#
+			dbh.recon[i,j] <- sum(dbh.recon[i+1, j], trees.gapfilled[i,j]*2, na.rm=T)#
+			}#
+	}#
+}#
+min(dbh.recon, na.rm=T)#
+dbh.recon[1:10,trees.check]#
+summary(dbh.recon[, trees.check])#
+#trees.gapfilled[, trees.check]#
+tree.data[tree.data$TreeID %in% trees.check,]
+summary(ring.data)
+dim(ring.data.valles); dim(ring.data.mmf)#
+ring.data <- rbind(ring.data.valles, ring.data.mmf)#
+#
+# putting the modeled data where there are no ring widths (will cause negative dbh)#
+ring.data$RW.gapfilled <- ifelse(is.na(ring.data$RW), ring.data$RW.modeled, ring.data$RW)#
+summary(ring.data)
+j="MMA001"
+trees.gapfilled[,j]
+j="MMA026"
+trees.gapfilled[,j]
+row.names(trees.gapfilled[which(is.na(trees.gapfilled[,j]))])
+years.na <- row.names(trees.gapfilled[which(is.na(trees.gapfilled[,j]))])
+ring.data[ring.data$TreeID==j & ring.data$Year %in% years.na,"RW.gapfilled"]
+j="VUF017"
+trees.gapfilled[,j]
+years.na <- row.names(trees.gapfilled[which(is.na(trees.gapfilled[,j]))])
+ring.data$RW.gapfilled <- ifelse(is.na(ring.data$RW), ring.data$RW.modeled, ring.data$RW)#
+summary(ring.data)
+ring.data[ring.data$TreeID==MMA026","RW""]
+ring.data[ring.data$TreeID==MMA026","RW"]
+j="MMA026"
+ring.data[ring.data$TreeID==j,"RW"]
+ring.data[ring.data$TreeID==j,"RW.gapfilled"]
+trees.gapfilled[,j]
+years.na
+years.na <- row.names(trees.gapfilled)[which(is.na(trees.gapfilled[,j]))]
+years.na
+dbh.recon <- trees.gapfilled#
+trees.check <- vector() # trees with negative dbh#
+for(j in names(dbh.recon)){#
+	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH recon); #
+	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0#
+	#	dbhrecon: fill year of sample with DBH when sampled#
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])#
+#
+	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA#
+	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]#
+	# Doing the DBH reconstruction	#
+	for(i in 2:(length(dbh.recon[,j]))){#
+		dbh.recon[i,j] <- ifelse(!is.na(trees.gapfilled[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, dbh.recon[i,j]) # subtracting the previous year's growth from DBH to get that year's DBH#
+	}#
+	# Get rid of dbh past the guestimated pith dates -- both dbh recon & gapfilled#
+	if(!is.na(tree.data[tree.data$TreeID==j, "Pith"])){#
+		dbh.recon[as.numeric(row.names(dbh.recon))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+		trees.gapfilled[as.numeric(row.names(trees.gapfilled))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA#
+	} else #
+	if(is.na(tree.data[tree.data$TreeID==j, "Pith"])){ # Get rid of negative modeled dbh#
+		dbh.recon[,j] <- ifelse(dbh.recon[,j]<0, NA, dbh.recon[,j]) #
+		trees.gapfilled[,j] <- ifelse(dbh.recon[,j]<0, NA, trees.gapfilled[,j]) 		#
+	}#
+	# also getting rid of these rings in the stacked ring data too#
+	years.na <- row.names(trees.gapfilled)[which(is.na(trees.gapfilled[,j]))]#
+	ring.data[ring.data$TreeID==j & ring.data$Year %in% years.na,"RW.gapfilled"] <- NA#
+#
+	if(min(dbh.recon[,j], na.rm=T)<0) trees.check <- c(trees.check, j)#
+}#
+dbh.recon[1:20, 1:10]#
+dbh.recon[1:20, (ncol(dbh.recon)-20):ncol(dbh.recon)]#
+min(dbh.recon, na.rm=T)#
+trees.check#
+summary(dbh.recon[,trees.check])
+# for trees with negative dbh, working from the inside out#
+	# If a tree has a negative DBH, we're just going to add from the inside out (at time )#
+for(j in trees.check){#
+	if(min(dbh.recon[,j], na.rm=T)<0){#
+		dbh.recon[,j] <- trees.gapfilled[,j]#
+		for(i in (nrow(dbh.recon)-1):1){#
+			dbh.recon[i,j] <- sum(dbh.recon[i+1, j], trees.gapfilled[i,j]*2, na.rm=T)#
+			}#
+	}#
+}#
+min(dbh.recon, na.rm=T)#
+dbh.recon[1:10,trees.check]#
+summary(dbh.recon[, trees.check])#
+#trees.gapfilled[, trees.check]#
+tree.data[tree.data$TreeID %in% trees.check,]
+summary(ring.data)
+write.csv(dbh.recon, "gap_filled_dbh.recon.csv", row.names=T)#
+write.csv(trees.gapfilled, "gap_filled_ring.widths.csv", row.names=T)
+summary(ring.data)#
+write.csv(ring.data, "TreeRWL_AllSites_stacked_gapfilled.csv", row.names=F)
