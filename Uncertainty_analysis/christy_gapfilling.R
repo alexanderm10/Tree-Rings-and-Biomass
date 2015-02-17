@@ -202,18 +202,21 @@ dim(ring.data)
 # ---------------------------------------
 # ----------------------------------------------------------------
 
-# ----------------------------------------------------------------
-# ----------------------------------------------------------------
+# ################################################################
+# ################################################################
 # RUNNING THE GAMM!!
-# ----------------------------------------------------------------
-# ----------------------------------------------------------------
+# ################################################################
+# ################################################################
 # A generalized additive mixed model (gamm) allows us to fit splines in a mixed model context
 # we can let these splines vary by tree which essentially detrends the core
 # here's we're using our dummy-filled ring widths as a response so that the spline will fit over the whole time period of interest
 # NOTE: for this to work with canopy class, we'll need to figure out what to do about dead trees 
 # NOTE: Right now this is set up for each site separately.  If you want to borrow strength from other sites to help gap fill certain species, run them together
-# ----------------------------------------------------------------
+# ################################################################
 
+# ----------------------------------------------------------------
+# Gapfilling trees for which we have at least some measurements
+# ----------------------------------------------------------------
 # ---------------------------------------
 # Morgan Monroe Forest
 # ---------------------------------------
@@ -394,6 +397,19 @@ summary(ring.data)
 write.csv(ring.data, "TreeRWL_AllSites_stacked_gapfilled.csv", row.names=F)
 
 
+# ################################################################
+# ################################################################
+
+# ----------------------------------------------------------------
+# Gapfilling trees that we have no measurements for (punky, dead...)
+# ----------------------------------------------------------------
+# Going to gapfill live trees only (won't try and figure out when dead trees welcome)
+# We can't fit a TreeID spline for trees we don't have any measurements for, so we need something more generalizeable
+#	The best options are probably species or PlotID; Ross votes PlotID because of variation in the Valles
+# ----------------------------------------------------------------
+
+
+gamm.mmf <- gamm(log(RW) ~ s(Year, bs="cs", k=3, by=TreeID) + dbh, random=list(spp=~1, site=~1, PlotID=~1), data= ring.data.mmf, na.action=na.omit)
 
 
 
