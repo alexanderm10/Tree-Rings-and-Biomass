@@ -16,7 +16,6 @@ core.data <- read.csv("Core_data_DOE_summer_2014.csv", na.strings=c("", "NA", "#
 names(core.data)
 core.data$plot <- substr(core.data$plot.id, 3, 3)
 core.data$plot <- as.factor(core.data$plot)
-
 summary(core.data)
 
 tree.data <- read.csv("tree_metadata_DOE_plus_valles.csv", na.strings=c("", "NA", "#VALUE!", "*"), header=T)
@@ -24,6 +23,8 @@ tree.data <- read.csv("tree_metadata_DOE_plus_valles.csv", na.strings=c("", "NA"
 names(tree.data)
 tree.data$plot <- substr(tree.data$PlotID, 3, 3)
 tree.data$plot <- as.factor(tree.data$plot)
+# Correcting Valles Plot IDs
+
 
 summary(tree.data)
 

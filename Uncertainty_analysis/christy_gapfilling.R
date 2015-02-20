@@ -57,6 +57,7 @@ summary(site.data)
 
 # merging in the year sampled into the tree data & calculating age
 tree.data <- merge(tree.data, site.data[,c("PlotID", "Year.sample")], all.x=T, all.y=F)
+tree.data$PlotID
 tree.data$Age <- tree.data$Year.sample - tree.data$Pith
 summary(tree.data)
 
@@ -256,7 +257,7 @@ dev.off()
 # ---------------------------------------
 ring.data.valles <- ring.data[substr(ring.data$PlotID,1,2)=="VL" | substr(ring.data$PlotID,1,2)=="VU",]
 ring.data.valles <- droplevels(ring.data.valles)
-ring.data.valles $RW <- ifelse(ring.data.valles$RW==0, 1e-6, ring.data.valles$RW)
+ring.data.valles$RW <- ifelse(ring.data.valles$RW==0, 1e-6, ring.data.valles$RW)
 summary(ring.data.valles)
 
 gamm.valles <- gamm(log(RW) ~ s(Year, bs="cs", k=3, by=TreeID) + dbh, random=list(spp=~1, site=~1, PlotID=~1), data= ring.data.valles, na.action=na.omit)
@@ -407,10 +408,80 @@ write.csv(ring.data, "TreeRWL_AllSites_stacked_gapfilled.csv", row.names=F)
 # We can't fit a TreeID spline for trees we don't have any measurements for, so we need something more generalizeable
 #	The best options are probably species or PlotID; Ross votes PlotID because of variation in the Valles
 # ----------------------------------------------------------------
+# Ring.data format: stack all of the core BAI, so that data frame with a SIGNLE BAI column, and then all of the factors in other columns
+ring.data <- read.csv("TreeRWL_AllSites_stacked.csv")
+ring.data$tree <- as.factor(ring.data$tree) 
+summary(ring.data)
 
+# Tree Data
+tree.data <- read.csv("TreeData.csv")
+summary(tree.data)
 
-gamm.mmf <- gamm(log(RW) ~ s(Year, bs="cs", k=3, by=TreeID) + dbh, random=list(spp=~1, site=~1, PlotID=~1), data= ring.data.mmf, na.action=na.omit)
+# Site Data (for year cored) 
+site.data <- read.csv("input files/DOE_plus_valles.csv", na.strings="")
+site.data$Year.sample <- as.numeric(substr(site.data$date.sample,7,10))
+summary(site.data)
 
+# merging in the year sampled into the tree data & calculating age
+tree.data <- merge(tree.data, site.data[,c("PlotID", "Year.sample")], all.x=T, all.y=F)
+tree.data$Age <- tree.data$Year.sample - tree.data$Pith
+summary(tree.data)
+
+# ---------------------------------------
+# ---------------------------------------
+# NOTE: Re-run the size-age section above so that we can create a data frame of NAs to fill for the missing trees
+# ---------------------------------------
+# ---------------------------------------
+
+# creating a data frame of blank ring widths to fill with the gamm
+summary(tree.data.model)
+trees.missing <- tree.data.model[!(tree.data.model$TreeID %in% unique(ring.data$TreeID)), c("spp", "site", "PlotID", "TreeID")]
+summary(trees.missing)# 29 missing trees: 4 from MM, 22 VUF, 3 VLF
+dim(trees.missing)
+
+# Creating a vector of years and dummy ring widths we're going to want to fill
+rw.dummy <- data.frame(Year=min(ring.data$Year):max(ring.data$Year), RW=NA)
+summary(rw.dummy)
+
+trees.missing <- merge(trees.missing, rw.dummy, all.x=T, all.y=T)
+summary(trees.missing)
+
+# ---------------------------------------
+# delete NAs for years way outside what we think we should be fitting
+# ---------------------------------------
+summary(tree.data.model)
+summary(trees.missing)
+dim(trees.missing)
+
+for(i in unique(trees.missing$TreeID)){
+	#------------------------------
+	#year.fill = the oldest year to fill based on above step (prediction interval, size-species-site relationships)
+	#------------------------------
+	yr.fill <- tree.data.model[tree.data.model$TreeID==i,"fill.year"]
+	#------------------------------
+
+	#------------------------------
+	# The actual insertion of the dummy fil value into the fill range
+	#------------------------------
+	trees.missing <- trees.missing[!(trees.missing$TreeID==i & trees.missing$Year<yr.fill),]
+	#------------------------------
+}
+summary(trees.missing)
+
+# ----------------------------------------------------------------
+# Creating a gamm for missing trees
+#	Because we don't have any ring measurements for missing trees, we can't use a TreeID spline (because we can't predict what we can't fit)
+# 	After talking with Ross, we decided to fit the spline by plot, which should get us the general plot dynamics and the hierarchical effects should help fill in the species; The fixed DBH effect will also help adjust growth based on size
+# ----------------------------------------------------------------
+# We're just fitting a single model for all missing trees, but it'll be okay since we're doing the spline by PlotID and have the random effects structure; this is what we could do for everything if the spline fitting by tree didn't take so long
+
+# the log RW doesn't like 0s, so lets just make 0 really small
+ring.data$RW <- ifelse(ring.data$RW==0, 1e-6, ring.data$RW)
+summary(ring.data)
+
+gamm.missing <- gamm(log(RW) ~ s(Year, bs="cs", k=3, by=PlotID) + dbh, random=list(spp=~1, site=~1, PlotID=~1), data= ring.data, na.action=na.omit)
+
+# ----------------------------------------------------------------
 
 
 
