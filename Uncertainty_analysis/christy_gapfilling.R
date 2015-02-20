@@ -51,12 +51,12 @@ tree.data <- read.csv("TreeData.csv")
 summary(tree.data)
 
 # Site Data (for year cored) 
-site.data <- read.csv("input files/DOE_plus_valles.csv", na.strings="")
-site.data$Year.sample <- as.numeric(substr(site.data$date.sample,7,10))
-summary(site.data)
+Site.data <- read.csv("raw input files/DOE_plus_valles.csv", na.strings="")
+Site.data$Year.sample <- as.numeric(substr(Site.data$date.sample,7,10))
+summary(Site.data)
 
 # merging in the year sampled into the tree data & calculating age
-tree.data <- merge(tree.data, site.data[,c("PlotID", "Year.sample")], all.x=T, all.y=F)
+tree.data <- merge(tree.data, Site.data[,c("PlotID", "Year.sample")], all.x=T, all.y=F)
 tree.data$PlotID
 tree.data$Age <- tree.data$Year.sample - tree.data$Pith
 summary(tree.data)
@@ -70,14 +70,14 @@ trees.dated <- ring.data[ring.data$Dated=="Y","TreeID"]
 # using the gamm allows us to fit a smoothing spline to each tree, which allows us to basically gapfill taking into account unique tree temporal trends
 #	current spline parameter: shrinkage version of cubic spline with 3 knots (stiff CR spline)
 #	when we fit a generalized version for missing trees, we'll have to decide what to fit it to instead of TreeID; I think probably species|plot
-# m1 <- gamm(RW ~ s(Year, bs="cs", k=3) + species + dbh, random=list(site=~1, PlotID=~1, TreeID=~1), data=ring.data, na.action=na.omit)
+# m1 <- gamm(RW ~ s(Year, bs="cs", k=3) + species + DBH..cm., random=list(Site=~1, PlotID=~1, TreeID=~1), data=ring.data, na.action=na.omit)
 
 # ----------------------------------------------------------------
 # IDEAL MODEL FORM (it won't work for many reasons)
 #	-- won't predict outside range of years observed on each core
 #	-- end up with singularity issues
 #	-- would take FOREVER to fit even if it did work
-# m1d <- gamm(RW ~ s(Year, bs="cs", k=3, by=TreeID) + species*dbh*canopy.class, random=list(site=~1, PlotID=~1, TreeID=~1), data=trees.dated.full, na.action=na.omit)
+# m1d <- gamm(RW ~ s(Year, bs="cs", k=3, by=TreeID) + species*DBH..cm.*canopy.class, random=list(Site=~1, PlotID=~1, TreeID=~1), data=trees.dated.full, na.action=na.omit)
 # ----------------------------------------------------------------
 
 
@@ -90,24 +90,24 @@ trees.dated <- ring.data[ring.data$Dated=="Y","TreeID"]
 # ---------------------------------------
 # 1) Create rough size-age relationships to give a narrow window of rings to fill (i.e. don't fill a 10 cm oak back to 1900 if our rings stop in 1980)
 # ---------------------------------------
-# What we need: core summary data (DBH, estimated pith date)
+# What we need: core summary data (DBH..cm., estimated pith date)
 
-# Ignoring all the sites we don't have and doing some exploratory graphing
+# Ignoring all the Sites we don't have and doing some exploratory graphing
 tree.data2 <- tree.data[tree.data$PlotID %in% unique(ring.data$PlotID),]
 summary(tree.data2)
 
 # Need to remove species for which we have no pith estimates for the time being
-spp.pith <- unique(tree.data2[!is.na(tree.data2$Pith), "spp"])
-tree.data3 <- tree.data2[tree.data2$spp %in%  spp.pith,]
+Species.pith <- unique(tree.data2[!is.na(tree.data2$Pith), "Species"])
+tree.data3 <- tree.data2[tree.data2$Species %in%  Species.pith,]
 summary(tree.data3)
 
-qplot(dbh, Age, color=spp, data=tree.data3) + facet_wrap(~spp) +
+qplot(DBH..cm., Age, color=Species, data=tree.data3) + facet_wrap(~Species) +
 	stat_smooth(method="lm", alpha=0.5, size=1.5) +
 	theme_bw()
 
 
-# Making a very basic linear model looking at site-specific species-dbh-age relationships
-dbh.age <- lm(Age ~ spp*dbh*site-1, data=tree.data3)
+# Making a very basic linear model looking at Site-specific species-DBH..cm.-age relationships
+dbh.age <- lm(Age ~ Species*DBH..cm.*Site-1, data=tree.data3)
 summary(dbh.age)
 summary(dbh.age)$r.squared # Note, this very basic model works pretty well!
 
@@ -132,7 +132,7 @@ summary(tree.data.model)
 # QUESTION: what to do about the species with no pith estimates?
 #	For now, I'm just going to do a species-naive fit within each plot
 #--------------------- 
-dbh.age.plot <- lm(Age ~ dbh*PlotID-1, data=tree.data.model)
+dbh.age.plot <- lm(Age ~ DBH..cm.*PlotID-1, data=tree.data.model)
 summary(dbh.age.plot) 
 
 age.pi.plot <- predict(dbh.age.plot, newdata= tree.data.model, interval="predict")
@@ -157,7 +157,7 @@ summary(tree.data.model)
 # ring.data$RW0 <- ring.data$RW # Making a column of dummy-filled ring widths
 # for(i in unique(ring.data$TreeID)){
 	# #------------------------------
-	# #year.fill = the oldest year to fill based on above step (prediction interval, size-species-site relationships)
+	# #year.fill = the oldest year to fill based on above step (prediction interval, size-species-Site relationships)
 	# #year.min = the oldest year measured
 	# #rw.fill = the dummy ring width to feed the model; right now this is for the last measured decade 
 	# #			-- (yr.min + 10) means the 10 years following year.min (
@@ -187,7 +187,7 @@ dim(ring.data)
 
 for(i in unique(ring.data$TreeID)){
 	#------------------------------
-	#year.fill = the oldest year to fill based on above step (prediction interval, size-species-site relationships)
+	#year.fill = the oldest year to fill based on above step (prediction interval, size-species-Site relationships)
 	#------------------------------
 	yr.fill <- tree.data.model[tree.data.model$TreeID==i,"fill.year"]
 	#------------------------------
@@ -212,7 +212,7 @@ dim(ring.data)
 # we can let these splines vary by tree which essentially detrends the core
 # here's we're using our dummy-filled ring widths as a response so that the spline will fit over the whole time period of interest
 # NOTE: for this to work with canopy class, we'll need to figure out what to do about dead trees 
-# NOTE: Right now this is set up for each site separately.  If you want to borrow strength from other sites to help gap fill certain species, run them together
+# NOTE: Right now this is set up for each Site separately.  If you want to borrow strength from other Sites to help gap fill certain species, run them together
 # ################################################################
 
 # ----------------------------------------------------------------
@@ -228,7 +228,7 @@ ring.data.mmf$RW <- ifelse(ring.data.mmf$RW==0, 1e-6, ring.data.mmf$RW)
 summary(ring.data.mmf)
 
 
-gamm.mmf <- gamm(log(RW) ~ s(Year, bs="cs", k=3, by=TreeID) + dbh, random=list(spp=~1, site=~1, PlotID=~1), data= ring.data.mmf, na.action=na.omit)
+gamm.mmf <- gamm(log(RW) ~ s(Year, bs="cs", k=3, by=TreeID) + DBH..cm., random=list(Species=~1, Site=~1, PlotID=~1), data= ring.data.mmf, na.action=na.omit)
 
 # Saving the GAMM From above so we can load it without having to refit it
 save(gamm.mmf, file="GapFilling_gamm_mmf_02.2015.rData")
@@ -243,8 +243,8 @@ summary(ring.data.mmf)
 
 # Graphing of the modeled rings we will use to fill the data (note this isn't truncating ones that are past where we think pith actually is)
 pdf("gamm_gapfill_mmf.pdf", height=7.5, width=10)
-ggplot() + facet_wrap(~spp) +
-	geom_path(aes(x=Year, y=RW, color=spp), data=ring.data.mmf, size=0.5) +
+ggplot() + facet_wrap(~Species) +
+	geom_path(aes(x=Year, y=RW, color=Species), data=ring.data.mmf, size=0.5) +
 	geom_point(aes(x=Year, y=RW.modeled), ring.data.mmf[is.na(ring.data.mmf$RW),], size=0.5) +
 	scale_y_continuous(limits=c(0,1.25)) +
 	theme_bw()
@@ -260,7 +260,7 @@ ring.data.valles <- droplevels(ring.data.valles)
 ring.data.valles$RW <- ifelse(ring.data.valles$RW==0, 1e-6, ring.data.valles$RW)
 summary(ring.data.valles)
 
-gamm.valles <- gamm(log(RW) ~ s(Year, bs="cs", k=3, by=TreeID) + dbh, random=list(spp=~1, site=~1, PlotID=~1), data= ring.data.valles, na.action=na.omit)
+gamm.valles <- gamm(log(RW) ~ s(Year, bs="cs", k=3, by=TreeID) + DBH..cm., random=list(Species=~1, Site=~1, PlotID=~1), data= ring.data.valles, na.action=na.omit)
 
 # Saving the GAMM From above so we can load it without having to refit it
 save(gamm.valles, file="GapFilling_gamm_valles_02.2015.rData")
@@ -275,8 +275,8 @@ summary(ring.data.valles)
 
 # VERY rough graphing of the modeled rings we will use to fill the data
 pdf("gamm_gapfill_valles.pdf", height=7.5, width=10)
-ggplot() + facet_grid(spp~site) +
-	geom_path(aes(x=Year, y=RW, color=spp), data=ring.data.valles, size=0.25) +
+ggplot() + facet_grid(Species~Site) +
+	geom_path(aes(x=Year, y=RW, color=Species), data=ring.data.valles, size=0.25) +
 	geom_point(aes(x=Year, y=RW.modeled), ring.data.valles[is.na(ring.data.valles$RW),], size=0.5) +
 	scale_y_continuous(limits=c(0,1.25)) +
 	theme_bw()
@@ -290,11 +290,11 @@ dev.off()
 # ---------------------------------------
 # Data Formatting
 # ---------------------------------------
-# putting the sites back into 1 file
+# putting the Sites back into 1 file
 dim(ring.data.valles); dim(ring.data.mmf)
 ring.data <- rbind(ring.data.valles, ring.data.mmf)
 
-# putting the modeled data where there are no ring widths (will cause negative dbh)
+# putting the modeled data where there are no ring widths (will cause negative DBH..cm.)
 ring.data$RW.gapfilled <- ifelse(is.na(ring.data$RW), ring.data$RW.modeled, ring.data$RW)
 summary(ring.data)
 
@@ -307,96 +307,6 @@ row.names(trees.gapfilled) <- trees.gapfilled$Year
 trees.gapfilled <- trees.gapfilled[,2:ncol(trees.gapfilled)]
 trees.gapfilled[(nrow(trees.gapfilled)-10):nrow(trees.gapfilled), 1:10]
 # ---------------------------------------
-
-# ---------------------------------------
-# DBH Reconstruction
-# ---------------------------------------
-# Tree Data
-tree.data <- read.csv("TreeData.csv")
-summary(tree.data)
-
-# Site Data (for year cored) 
-site.data <- read.csv("input files/DOE_plus_valles.csv", na.strings="")
-site.data$Year.sample <- as.numeric(substr(site.data$date.sample,7,10))
-summary(site.data)
-
-# merging in the year sampled into the tree data & calculating age
-tree.data <- merge(tree.data, site.data[,c("PlotID", "Year.sample")], all.x=T, all.y=F)
-tree.data$Age <- tree.data$Year.sample - tree.data$Pith
-summary(tree.data)
-
-core.data <- read.csv("Core_data_DOE_summer_2014.csv", na.strings=c("", "NA", "#VALUE!", "*"), header=T)
-#adding a column include which plot at the site the trees belong to
-names(core.data)
-core.data$plot <- substr(core.data$plot.id, 3, 3)
-core.data$plot <- as.factor(core.data$plot)
-summary(core.data)
-
-# Ordering the data
-trees.gapfilled <- trees.gapfilled[order(row.names(trees.gapfilled), decreasing=T),order(names(trees.gapfilled))]
-trees.gapfilled[1:10, 1:10]
-trees.gapfilled[1:10, (ncol(trees.gapfilled)-10):ncol(trees.gapfilled)]
-
-dbh.recon <- trees.gapfilled
-trees.check <- vector() # trees with negative dbh
-for(j in names(dbh.recon)){
-	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH recon); 
-	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0
-	#	dbhrecon: fill year of sample with DBH when sampled
-	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA
-	trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])
-
-	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA
-	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "dbh"]
-	
-	# Doing the DBH reconstruction	
-	for(i in 2:(length(dbh.recon[,j]))){
-		dbh.recon[i,j] <- ifelse(!is.na(trees.gapfilled[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, dbh.recon[i,j]) # subtracting the previous year's growth from DBH to get that year's DBH
-	}
-	
-	# Get rid of dbh past the guestimated pith dates -- both dbh recon & gapfilled
-	if(!is.na(tree.data[tree.data$TreeID==j, "Pith"])){
-		dbh.recon[as.numeric(row.names(dbh.recon))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA
-		trees.gapfilled[as.numeric(row.names(trees.gapfilled))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA
-	} else 
-	if(is.na(tree.data[tree.data$TreeID==j, "Pith"])){ # Get rid of negative modeled dbh
-		dbh.recon[,j] <- ifelse(dbh.recon[,j]<0, NA, dbh.recon[,j]) 
-		trees.gapfilled[,j] <- ifelse(dbh.recon[,j]<0, NA, trees.gapfilled[,j]) 		
-	}
-	# also getting rid of these rings in the stacked ring data too
-	years.na <- row.names(trees.gapfilled)[which(is.na(trees.gapfilled[,j]))]
-	ring.data[ring.data$TreeID==j & ring.data$Year %in% years.na,"RW.gapfilled"] <- NA
-
-	if(min(dbh.recon[,j], na.rm=T)<0) trees.check <- c(trees.check, j)
-}
-dbh.recon[1:20, 1:10]
-dbh.recon[1:20, (ncol(dbh.recon)-20):ncol(dbh.recon)]
-min(dbh.recon, na.rm=T)
-trees.check
-summary(dbh.recon[,trees.check])
-
-# for trees with negative dbh, working from the inside out
-	# If a tree has a negative DBH, we're just going to add from the inside out (at time )
-for(j in trees.check){
-	if(min(dbh.recon[,j], na.rm=T)<0){
-		dbh.recon[,j] <- trees.gapfilled[,j]
-		for(i in (nrow(dbh.recon)-1):1){
-			dbh.recon[i,j] <- sum(dbh.recon[i+1, j], trees.gapfilled[i,j]*2, na.rm=T)
-			}
-	}
-}
-min(dbh.recon, na.rm=T)
-dbh.recon[1:10,trees.check]
-summary(dbh.recon[, trees.check])
-#trees.gapfilled[, trees.check]
-tree.data[tree.data$TreeID %in% trees.check,]
-# ---------------------------------------
-write.csv(dbh.recon, "gap_filled_dbh.recon.csv", row.names=T)
-write.csv(trees.gapfilled, "gap_filled_ring.widths.csv", row.names=T)
-
-summary(ring.data)
-write.csv(ring.data, "TreeRWL_AllSites_stacked_gapfilled.csv", row.names=F)
-
 
 # ################################################################
 # ################################################################
@@ -418,12 +328,12 @@ tree.data <- read.csv("TreeData.csv")
 summary(tree.data)
 
 # Site Data (for year cored) 
-site.data <- read.csv("input files/DOE_plus_valles.csv", na.strings="")
-site.data$Year.sample <- as.numeric(substr(site.data$date.sample,7,10))
-summary(site.data)
+Site.data <- read.csv("input files/DOE_plus_valles.csv", na.strings="")
+Site.data$Year.sample <- as.numeric(substr(Site.data$date.sample,7,10))
+summary(Site.data)
 
 # merging in the year sampled into the tree data & calculating age
-tree.data <- merge(tree.data, site.data[,c("PlotID", "Year.sample")], all.x=T, all.y=F)
+tree.data <- merge(tree.data, Site.data[,c("PlotID", "Year.sample")], all.x=T, all.y=F)
 tree.data$Age <- tree.data$Year.sample - tree.data$Pith
 summary(tree.data)
 
@@ -435,7 +345,7 @@ summary(tree.data)
 
 # creating a data frame of blank ring widths to fill with the gamm
 summary(tree.data.model)
-trees.missing <- tree.data.model[!(tree.data.model$TreeID %in% unique(ring.data$TreeID)), c("spp", "site", "PlotID", "TreeID")]
+trees.missing <- tree.data.model[!(tree.data.model$TreeID %in% unique(ring.data$TreeID)), c("Species", "Site", "PlotID", "TreeID")]
 summary(trees.missing)# 29 missing trees: 4 from MM, 22 VUF, 3 VLF
 dim(trees.missing)
 
@@ -455,7 +365,7 @@ dim(trees.missing)
 
 for(i in unique(trees.missing$TreeID)){
 	#------------------------------
-	#year.fill = the oldest year to fill based on above step (prediction interval, size-species-site relationships)
+	#year.fill = the oldest year to fill based on above step (prediction interval, size-species-Site relationships)
 	#------------------------------
 	yr.fill <- tree.data.model[tree.data.model$TreeID==i,"fill.year"]
 	#------------------------------
@@ -471,7 +381,7 @@ summary(trees.missing)
 # ----------------------------------------------------------------
 # Creating a gamm for missing trees
 #	Because we don't have any ring measurements for missing trees, we can't use a TreeID spline (because we can't predict what we can't fit)
-# 	After talking with Ross, we decided to fit the spline by plot, which should get us the general plot dynamics and the hierarchical effects should help fill in the species; The fixed DBH effect will also help adjust growth based on size
+# 	After talking with Ross, we decided to fit the spline by plot, which should get us the general plot dynamics and the hierarchical effects should help fill in the species; The fixed DBH..cm. effect will also help adjust growth based on size
 # ----------------------------------------------------------------
 # We're just fitting a single model for all missing trees, but it'll be okay since we're doing the spline by PlotID and have the random effects structure; this is what we could do for everything if the spline fitting by tree didn't take so long
 
@@ -479,16 +389,105 @@ summary(trees.missing)
 ring.data$RW <- ifelse(ring.data$RW==0, 1e-6, ring.data$RW)
 summary(ring.data)
 
-gamm.missing <- gamm(log(RW) ~ s(Year, bs="cs", k=3, by=PlotID) + dbh, random=list(spp=~1, site=~1, PlotID=~1), data= ring.data, na.action=na.omit)
+gamm.missing <- gamm(log(RW) ~ s(Year, bs="cs", k=3, by=PlotID) + DBH..cm., random=list(Species=~1, Site=~1, PlotID=~1), data= ring.data, na.action=na.omit)
 
 # ----------------------------------------------------------------
 
 
 
 
+##################################################################################
+# DBH Reconstruction
+##################################################################################
 
+# ---------------------------------------
+# DBH..cm. Reconstruction
+# ---------------------------------------
+# Tree Data
+tree.data <- read.csv("TreeData.csv")
+summary(tree.data)
 
+# Site Data (for year cored) 
+Site.data <- read.csv("input files/DOE_plus_valles.csv", na.strings="")
+Site.data$Year.sample <- as.numeric(substr(Site.data$date.sample,7,10))
+summary(Site.data)
 
+# merging in the year sampled into the tree data & calculating age
+tree.data <- merge(tree.data, Site.data[,c("PlotID", "Year.sample")], all.x=T, all.y=F)
+tree.data$Age <- tree.data$Year.sample - tree.data$Pith
+summary(tree.data)
+
+core.data <- read.csv("Core_data_DOE_summer_2014.csv", na.strings=c("", "NA", "#VALUE!", "*"), header=T)
+#adding a column include which plot at the Site the trees belong to
+names(core.data)
+core.data$plot <- substr(core.data$plot.id, 3, 3)
+core.data$plot <- as.factor(core.data$plot)
+summary(core.data)
+
+# Ordering the data
+trees.gapfilled <- trees.gapfilled[order(row.names(trees.gapfilled), decreasing=T),order(names(trees.gapfilled))]
+trees.gapfilled[1:10, 1:10]
+trees.gapfilled[1:10, (ncol(trees.gapfilled)-10):ncol(trees.gapfilled)]
+
+DBH..cm..recon <- trees.gapfilled
+trees.check <- vector() # trees with negative DBH..cm.
+for(j in names(DBH..cm..recon)){
+	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH..cm. recon); 
+	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0
+	#	DBH..cm.recon: fill year of sample with DBH..cm. when sampled
+	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA
+	trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])
+
+	DBH..cm..recon[as.numeric(row.names(DBH..cm..recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA
+	DBH..cm..recon[as.numeric(row.names(DBH..cm..recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "DBH..cm."]
+	
+	# Doing the DBH..cm. reconstruction	
+	for(i in 2:(length(DBH..cm..recon[,j]))){
+		DBH..cm..recon[i,j] <- ifelse(!is.na(trees.gapfilled[i-1,j]), DBH..cm..recon[i-1,j] - trees.gapfilled[i-1,j]*2, DBH..cm..recon[i,j]) # subtracting the previous year's growth from DBH..cm. to get that year's DBH..cm.
+	}
+	
+	# Get rid of DBH..cm. past the guestimated pith dates -- both DBH..cm. recon & gapfilled
+	if(!is.na(tree.data[tree.data$TreeID==j, "Pith"])){
+		DBH..cm..recon[as.numeric(row.names(DBH..cm..recon))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA
+		trees.gapfilled[as.numeric(row.names(trees.gapfilled))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA
+	} else 
+	if(is.na(tree.data[tree.data$TreeID==j, "Pith"])){ # Get rid of negative modeled DBH..cm.
+		DBH..cm..recon[,j] <- ifelse(DBH..cm..recon[,j]<0, NA, DBH..cm..recon[,j]) 
+		trees.gapfilled[,j] <- ifelse(DBH..cm..recon[,j]<0, NA, trees.gapfilled[,j]) 		
+	}
+	# also getting rid of these rings in the stacked ring data too
+	years.na <- row.names(trees.gapfilled)[which(is.na(trees.gapfilled[,j]))]
+	ring.data[ring.data$TreeID==j & ring.data$Year %in% years.na,"RW.gapfilled"] <- NA
+
+	if(min(DBH..cm..recon[,j], na.rm=T)<0) trees.check <- c(trees.check, j)
+}
+DBH..cm..recon[1:20, 1:10]
+DBH..cm..recon[1:20, (ncol(DBH..cm..recon)-20):ncol(DBH..cm..recon)]
+min(DBH..cm..recon, na.rm=T)
+trees.check
+summary(DBH..cm..recon[,trees.check])
+
+# for trees with negative DBH..cm., working from the inside out
+	# If a tree has a negative DBH..cm., we're just going to add from the inside out (at time )
+for(j in trees.check){
+	if(min(DBH..cm..recon[,j], na.rm=T)<0){
+		DBH..cm..recon[,j] <- trees.gapfilled[,j]
+		for(i in (nrow(DBH..cm..recon)-1):1){
+			DBH..cm..recon[i,j] <- sum(DBH..cm..recon[i+1, j], trees.gapfilled[i,j]*2, na.rm=T)
+			}
+	}
+}
+min(DBH..cm..recon, na.rm=T)
+DBH..cm..recon[1:10,trees.check]
+summary(DBH..cm..recon[, trees.check])
+#trees.gapfilled[, trees.check]
+tree.data[tree.data$TreeID %in% trees.check,]
+# ---------------------------------------
+write.csv(DBH..cm..recon, "gap_filled_DBH..cm..recon.csv", row.names=T)
+write.csv(trees.gapfilled, "gap_filled_ring.widths.csv", row.names=T)
+
+summary(ring.data)
+write.csv(ring.data, "TreeRWL_AllSites_stacked_gapfilled.csv", row.names=F)
 
 ##################################################################################
 # see next script for reconstructing basal area of trees with no samples 
