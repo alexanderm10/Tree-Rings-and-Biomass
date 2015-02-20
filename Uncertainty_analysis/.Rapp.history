@@ -1,0 +1,183 @@
+###################################################################################
+## Basic Components necessary for data management for doing dendro modelling#
+###################################################################################
+#
+# clear memory#
+rm(list=ls())#
+#
+# importing libraries#
+library(dplR)#
+library(lattice)#
+#
+# Getting Libraries#
+library(reshape)#
+library(car)#
+library(mgcv)#
+library(nlme)#
+library(lmeSplines)#
+#library(lme4)#
+library(splines)#
+library(MASS)#
+library(MuMIn)#
+library(ggplot2)#
+library(grid)#
+se <- function(x){#
+	sd(x, na.rm=TRUE) / sqrt((length(!is.na(x))))}#
+#
+q.blank <- theme(axis.line=element_line(color="black", size=0.5), panel.grid.major=element_blank(), panel.grid.minor= element_blank(), panel.border= element_blank(), panel.background= element_blank(), axis.text.x=element_text(angle=0, color="black", size=14, face="bold"), axis.text.y=element_text(color="black", size=12, face="bold"), axis.title.x=element_text(face="bold", size=14),  axis.title.y=element_text(face="bold", size=14))
+# Ring.data format: stack all of the core BAI, so that data frame with a SIGNLE BAI column, and then all of the factors in other columns#
+ring.data <- read.csv("TreeRWL_AllSites_stacked.csv")#
+ring.data$tree <- as.factor(ring.data$tree) #
+summary(ring.data)#
+#
+# Tree Data#
+tree.data <- read.csv("TreeData.csv")#
+summary(tree.data)#
+#
+# Site Data (for year cored) #
+site.data <- read.csv("input files/DOE_plus_valles.csv", na.strings="")#
+site.data$Year.sample <- as.numeric(substr(site.data$date.sample,7,10))#
+summary(site.data)#
+#
+# merging in the year sampled into the tree data & calculating age#
+tree.data <- merge(tree.data, site.data[,c("PlotID", "Year.sample")], all.x=T, all.y=F)#
+tree.data$Age <- tree.data$Year.sample - tree.data$Pith#
+summary(tree.data)#
+#
+# We're going to run 2 sets of fillin models:#
+# 1) Model based on only DATED trees (m1d)#
+# 2) Model based on both DATED and UNDATED trees (m1u)#
+#
+trees.dated <- ring.data[ring.data$Dated=="Y","TreeID"]
+# ---------------------------------------#
+# 1) Create rough size-age relationships to give a narrow window of rings to fill (i.e. don't fill a 10 cm oak back to 1900 if our rings stop in 1980)#
+# ---------------------------------------#
+# What we need: core summary data (DBH, estimated pith date)#
+#
+# Ignoring all the sites we don't have and doing some exploratory graphing#
+tree.data2 <- tree.data[tree.data$PlotID %in% unique(ring.data$PlotID),]#
+summary(tree.data2)#
+#
+# Need to remove species for which we have no pith estimates for the time being#
+spp.pith <- unique(tree.data2[!is.na(tree.data2$Pith), "spp"])#
+tree.data3 <- tree.data2[tree.data2$spp %in%  spp.pith,]#
+summary(tree.data3)#
+#
+qplot(dbh, Age, color=spp, data=tree.data3) + facet_wrap(~spp) +#
+	stat_smooth(method="lm", alpha=0.5, size=1.5) +#
+	theme_bw()#
+# Making a very basic linear model looking at site-specific species-dbh-age relationships#
+dbh.age <- lm(Age ~ spp*dbh*site-1, data=tree.data3)#
+summary(dbh.age)#
+summary(dbh.age)$r.squared # Note, this very basic model works pretty well!#
+#
+# Using the prediction interval to get us a higher upper bound#
+age.pi <- predict(dbh.age, newdata=tree.data3, interval="predict")#
+summary(age.pi)#
+dim(age.pi); dim(tree.data3) # Making sure we didn't lose any rows along the way#
+#
+tree.data3 <- cbind(tree.data3, age.pi)#
+summary(tree.data3)#
+#
+# Setting the filling window to the upper p.i. limit#
+tree.data3$fill.year <- ifelse(is.na(tree.data3$Pith), tree.data3$Year.sample-tree.data3$upr, tree.data3$Pith)#
+summary(tree.data3)#
+# Merging this back into a data frame that contains info for all the trees we're modeling right now#
+tree.data.model <- merge(tree.data3, tree.data2, all.x=T, all.y=T)#
+summary(tree.data.model)
+#--------------------- #
+# QUESTION: what to do about the species with no pith estimates?#
+#	For now, I'm just going to do a species-naive fit within each plot#
+#--------------------- #
+dbh.age.plot <- lm(Age ~ dbh*PlotID-1, data=tree.data.model)#
+summary(dbh.age.plot) #
+#
+age.pi.plot <- predict(dbh.age.plot, newdata= tree.data.model, interval="predict")#
+summary(age.pi.plot)#
+dim(age.pi.plot); dim(tree.data.model)#
+#
+summary(tree.data.model)#
+# Filling missing fill.year with one caluclated form age.pi.plot fill #
+tree.data.model[is.na(tree.data.model$fill.year),"fill.year"] <- tree.data.model[is.na(tree.data.model$fill.year),"Year.sample"] - age.pi.plot[which(is.na(tree.data.model$fill.year)),3]#
+summary(tree.data.model)
+summary(tree.data.model)
+tree.data.model$TreeID %in% unique(ring.data$TreeID)
+trees.missing <- tree.data.model$TreeID[!(tree.data.model$TreeID %in% unique(ring.data$TreeID))]
+trees.missing
+length(trees.missing)
+?data.frame
+min(ring.data$Year):max(ring.data$Year)
+rw.dummy <- data.frame(Year=min(ring.data$Year):max(ring.data$Year), RW=NA)
+summary(rw.dummy)
+trees.missing <- merge(trees.missing, rw.dummy, all.x=T, all.y=T)
+summary(trees.missing)
+trees.missing <- tree.data.model[!(tree.data.model$TreeID %in% unique(ring.data$TreeID)), c("spp", "site", "PlotID", "TreeID")]
+summary(trees.missing)
+summary(trees.missing); dim(trees.missing)
+# Creating a vector of years and dummy ring widths we're going to want to fill#
+rw.dummy <- data.frame(Year=min(ring.data$Year):max(ring.data$Year), RW=NA)#
+summary(rw.dummy)#
+#
+trees.missing <- merge(trees.missing, rw.dummy, all.x=T, all.y=T)#
+names(trees.missing) <- c("TreeID", "Year", "RW")#
+summary(trees.missing)
+trees.missing <- tree.data.model[!(tree.data.model$TreeID %in% unique(ring.data$TreeID)), c("spp", "site", "PlotID", "TreeID")]#
+summary(trees.missing)# 29 missing trees: 4 from MM, 22 VUF, 3 VLF#
+dim(trees.missing)#
+#
+# Creating a vector of years and dummy ring widths we're going to want to fill#
+rw.dummy <- data.frame(Year=min(ring.data$Year):max(ring.data$Year), RW=NA)#
+summary(rw.dummy)
+trees.missing <- merge(trees.missing, rw.dummy, all.x=T, all.y=T)
+summary(trees.missing)
+summary(tree.data.model)#
+summary(trees.missing)
+for(i in unique(trees.missing$TreeID)){#
+	#------------------------------#
+	#year.fill = the oldest year to fill based on above step (prediction interval, size-species-site relationships)#
+	#------------------------------#
+	yr.fill <- tree.data.model[tree.data.model$TreeID==i,"fill.year"]#
+	#------------------------------#
+#
+	#------------------------------#
+	# The actual insertion of the dummy fil value into the fill range#
+	#------------------------------#
+	trees.missing <- trees.missing[!(trees.missing$TreeID==i & trees.missing$Year<yr.fill),]#
+	#------------------------------#
+}#
+summary(trees.missing)
+gamm.missing <- gamm(log(RW) ~ s(Year, bs="cs", k=3, by=PlotID) + dbh, random=list(spp=~1, site=~1, PlotID=~1), data= ring.data, na.action=na.omit)
+summary(ring.data)
+ring.data[ring.data$RW==0, "RW"] <- 1e-6
+summary(ring.data)
+ring.data[ring.data$RW==0, "RW"]
+ring.data$RW <- ifelse(ring.data$RW==0, 1e-6, ring.data$RW)
+summary(ring.data)
+gamm.missing <- gamm(log(RW) ~ s(Year, bs="cs", k=3, by=PlotID) + dbh, random=list(spp=~1, site=~1, PlotID=~1), data= ring.data, na.action=na.omit)
+summary(treeeID)
+summary(tree.data.model)
+library(dplR)#
+se <- function(x){#
+  sd(x, na.rm=TRUE) / sqrt((length(!is.na(x))))}#
+##################################################################################################
+# Loading up .csv file that has meta data and RWL files for ring widths#
+# Also doing some housekeeping (unit conversions, name formats) up front to make the workflow smoother#
+##################################################################################################
+#
+#importing the diameter files of all trees sampled: includes tree id, spp, plot assignment, and DBH #
+#loading the dplR to use the basal area reconstruction functions.#
+#
+core.data <- read.csv("Core_data_DOE_summer_2014.csv", na.strings=c("", "NA", "#VALUE!", "*"), header=T)#
+#adding a column include which plot at the site the trees belong to#
+names(core.data)#
+core.data$plot <- substr(core.data$plot.id, 3, 3)#
+core.data$plot <- as.factor(core.data$plot)
+summary(core.data)
+unique(core.data$plot.id)
+tree.data <- read.csv("tree_metadata_DOE_plus_valles.csv", na.strings=c("", "NA", "#VALUE!", "*"), header=T)#
+#adding a column include which plot at the site the trees belong to#
+names(tree.data)#
+tree.data$plot <- substr(tree.data$PlotID, 3, 3)#
+tree.data$plot <- as.factor(tree.data$plot)#
+#
+summary(tree.data)

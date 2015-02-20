@@ -1205,3 +1205,46 @@ write.csv(dbh.recon, "gap_filled_dbh.recon.csv", row.names=T)#
 write.csv(trees.gapfilled, "gap_filled_ring.widths.csv", row.names=T)
 summary(ring.data)#
 write.csv(ring.data, "TreeRWL_AllSites_stacked_gapfilled.csv", row.names=F)
+library(dplR)#
+se <- function(x){#
+  sd(x, na.rm=TRUE) / sqrt((length(!is.na(x))))}#
+##################################################################################################
+# Loading up .csv file that has meta data and RWL files for ring widths#
+# Also doing some housekeeping (unit conversions, name formats) up front to make the workflow smoother#
+##################################################################################################
+#
+#importing the diameter files of all trees sampled: includes tree id, spp, plot assignment, and DBH #
+#loading the dplR to use the basal area reconstruction functions.#
+#
+core.data <- read.csv("Core_data_DOE_summer_2014.csv", na.strings=c("", "NA", "#VALUE!", "*"), header=T)#
+#adding a column include which plot at the site the trees belong to#
+names(core.data)#
+core.data$plot <- substr(core.data$plot.id, 3, 3)#
+core.data$plot <- as.factor(core.data$plot)#
+#
+summary(core.data)#
+#
+tree.data <- read.csv("tree_metadata_DOE_plus_valles.csv", na.strings=c("", "NA", "#VALUE!", "*"), header=T)#
+#adding a column include which plot at the site the trees belong to#
+names(tree.data)#
+tree.data$plot <- substr(tree.data$PlotID, 3, 3)#
+tree.data$plot <- as.factor(tree.data$plot)#
+#
+summary(tree.data)#
+#load in core details data sheet.  Has living/dead, pith info, measurement info.#
+#importing ring widths of dated samples as an object and making plot a factor since there were two distinct plots.  We may remove this for the nested design.  #
+#Removing NA's from the files#
+# NOTE: reading in a single rwl with all measured trees otherwise you're going to need to make sure to change the file paths for EVERYTHING otherwise you overwrite important files and make a lot more work for yourself#
+core.rw <- read.rwl("RWL/RWL_all_trees.rwl")#
+summary(core.rw)#
+#
+#removing the extra character that tellervo adds#
+names(core.rw)<-substr(names(core.rw), 1, 7)#
+names(core.rw)#
+#
+# NOTE: Unit Conversion Step#
+#we divide by 10 here because we are in mm going to cm (as long as you upload with dplR) #
+summary(core.rw)#
+core.rw <- core.rw/10#
+summary(core.rw)#
+core.rw[(nrow(core.rw)-20):nrow(core.rw), 1:10]
