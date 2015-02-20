@@ -8,28 +8,24 @@ se <- function(x){
 # Also doing some housekeeping (unit conversions, name formats) up front to make the workflow smoother
 #################################################################################################
 
-#importing the diameter files of all trees sampled: includes tree id, spp, plot assignment, and DBH 
+#load in core details data sheet.  Has living/dead, pith info, measurement info.
 #loading the dplR to use the basal area reconstruction functions.
-
-core.data <- read.csv("Core_data_DOE_summer_2014.csv", na.strings=c("", "NA", "#VALUE!", "*"), header=T)
+core.data <- read.csv("raw input files/Core_data_DOE_summer_2014.csv", na.strings=c("", "NA", "#VALUE!", "*"), header=T)
 #adding a column include which plot at the site the trees belong to
 names(core.data)
 core.data$plot <- substr(core.data$plot.id, 3, 3)
 core.data$plot <- as.factor(core.data$plot)
 summary(core.data)
 
-tree.data <- read.csv("tree_metadata_DOE_plus_valles.csv", na.strings=c("", "NA", "#VALUE!", "*"), header=T)
+#importing the diameter files of all trees sampled: includes tree id, spp, plot assignment, and DBH 
+tree.data <- read.csv("raw input files/tree_metadata_DOE_plus_valles.csv", na.strings=c("", "NA", "#VALUE!", "*"), header=T)
 #adding a column include which plot at the site the trees belong to
 names(tree.data)
 tree.data$plot <- substr(tree.data$PlotID, 3, 3)
 tree.data$plot <- as.factor(tree.data$plot)
-# Correcting Valles Plot IDs
-
-
 summary(tree.data)
 
 
-#load in core details data sheet.  Has living/dead, pith info, measurement info.
 
 
 #importing ring widths of dated samples as an object and making plot a factor since there were two distinct plots.  We may remove this for the nested design.  
@@ -89,7 +85,7 @@ tree.rw <- data.frame(array(NA, dim=c(nrow(core.rw), length(trees)))) # a blank 
 row.names(tree.rw) <- row.names(core.rw)  # labeling the rows with the years from our rwl
 names(tree.rw)<-unique(substr(names(core.rw), 1, 6)) # labeling the columns as trees
 # summary(tree.rw) # this will get really big very quickly
-dim(tree.rw) # 176 trees, 107 years of data
+dim(tree.rw) # 266 trees, 112 years of data
 
 # The Aggregation Loop
 for(i in unique(trees)){
@@ -184,14 +180,3 @@ write.csv(tree.stack, "TreeRWL_AllSites_stacked.csv", row.names=F)
 # GO TO GAPFILLING SCRIPT NOW!!:-)
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
-
-# ----------------------------------------------------------------------------
-# I think this next block can get deleted
-# ----------------------------------------------------------------------------
-# Subsetting only the sites & species I have full data for right now
-#sites <- unique(establishment$Site)
-#sites
-
-#species <- unique(establishment$Spp)
-#species
-
