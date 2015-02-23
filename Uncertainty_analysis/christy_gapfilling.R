@@ -240,7 +240,7 @@ save(gamm.mmf, file="GapFilling_gamm_mmf_02.2015.rData")
 # Making Predicted ring widths
 ring.data.mmf$RW.modeled <- exp(predict(gamm.mmf, ring.data.mmf))
 summary(ring.data.mmf)
-write.csv(ring.data.valles, "GapFilling_MMF_Measured_Filled.csv", row.names=F)
+write.csv(ring.data.mmf, "GapFilling_MMF_Measured_Filled.csv", row.names=F)
 
 # Graphing of the modeled rings we will use to fill the data (note this isn't truncating ones that are past where we think pith actually is)
 pdf("gamm_gapfill_mmf.pdf", height=7.5, width=10)
@@ -369,8 +369,8 @@ summary(ring.data)
 
 gamm.missing <- gamm(log(RW) ~ s(Year, bs="cs", k=3, by=PlotID) + DBH..cm., random=list(Species=~1, Site=~1, PlotID=~1), data= ring.data, na.action=na.omit)
 
-par(mfrow=c(3,3))
-plot(gamm.missing$gam)
+# par(mfrow=c(3,3))
+# plot(gamm.missing$gam)
 
 trees.missing$RW.modeled <- exp(predict(gamm.missing, trees.missing))
 summary(trees.missing)
@@ -400,7 +400,7 @@ summary(ring.data)
 # making a data frame with trees as columns and years as ros
 ring.data$Year <- as.factor(ring.data$Year)
 trees.gapfilled <- recast(ring.data[,c("Year", "TreeID", "RW.gapfilled")], Year ~ TreeID)
-summary(trees.gapfilled)
+# summary(trees.gapfilled)
 
 row.names(trees.gapfilled) <- trees.gapfilled$Year
 trees.gapfilled <- trees.gapfilled[,2:ncol(trees.gapfilled)]
@@ -420,7 +420,7 @@ tree.data <- read.csv("TreeData.csv")
 summary(tree.data)
 
 # Site Data (for year cored) 
-Site.data <- read.csv("input files/DOE_plus_valles.csv", na.strings="")
+Site.data <- read.csv("raw input files/DOE_plus_valles.csv", na.strings="")
 Site.data$Year.sample <- as.numeric(substr(Site.data$date.sample,7,10))
 summary(Site.data)
 
@@ -429,7 +429,7 @@ tree.data <- merge(tree.data, Site.data[,c("PlotID", "Year.sample")], all.x=T, a
 tree.data$Age <- tree.data$Year.sample - tree.data$Pith
 summary(tree.data)
 
-core.data <- read.csv("Core_data_DOE_summer_2014.csv", na.strings=c("", "NA", "#VALUE!", "*"), header=T)
+core.data <- read.csv("raw input files/Core_data_DOE_summer_2014.csv", na.strings=c("", "NA", "#VALUE!", "*"), header=T)
 #adding a column include which plot at the Site the trees belong to
 names(core.data)
 core.data$plot <- substr(core.data$plot.id, 3, 3)
@@ -461,7 +461,7 @@ for(j in names(dbh.recon)){
 	
 	# Get rid of DBH..cm. past the guestimated pith dates -- both DBH..cm. recon & gapfilled
 	if(!is.na(tree.data[tree.data$TreeID==j, "Pith"])){
-		DBH..cm..recon[as.numeric(row.names(DBH..cm..recon))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA
+		dbh.recon[as.numeric(row.names(dbh.recon))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA
 		trees.gapfilled[as.numeric(row.names(trees.gapfilled))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA
 	} else 
 	if(is.na(tree.data[tree.data$TreeID==j, "Pith"])){ # Get rid of negative modeled DBH..cm.
@@ -472,27 +472,27 @@ for(j in names(dbh.recon)){
 	years.na <- row.names(trees.gapfilled)[which(is.na(trees.gapfilled[,j]))]
 	ring.data[ring.data$TreeID==j & ring.data$Year %in% years.na,"RW.gapfilled"] <- NA
 
-	if(min(DBH..cm..recon[,j], na.rm=T)<0) trees.check <- c(trees.check, j)
+	if(min(dbh.recon[,j], na.rm=T)<0) trees.check <- c(trees.check, j)
 }
-DBH..cm..recon[1:20, 1:10]
-DBH..cm..recon[1:20, (ncol(DBH..cm..recon)-20):ncol(DBH..cm..recon)]
-min(DBH..cm..recon, na.rm=T)
+dbh.recon[1:20, 1:10]
+dbh.recon[1:20, (ncol(dbh.recon)-20):ncol(dbh.recon)]
+min(dbh.recon, na.rm=T)
 trees.check
-summary(DBH..cm..recon[,trees.check])
+summary(dbh.recon[,trees.check])
 
 # for trees with negative DBH..cm., working from the inside out
 	# If a tree has a negative DBH..cm., we're just going to add from the inside out (at time )
 for(j in trees.check){
-	if(min(DBH..cm..recon[,j], na.rm=T)<0){
-		DBH..cm..recon[,j] <- trees.gapfilled[,j]
-		for(i in (nrow(DBH..cm..recon)-1):1){
-			DBH..cm..recon[i,j] <- sum(DBH..cm..recon[i+1, j], trees.gapfilled[i,j]*2, na.rm=T)
+	if(min(dbh.recon[,j], na.rm=T)<0){
+		dbh.recon[,j] <- trees.gapfilled[,j]
+		for(i in (nrow(dbh.recon)-1):1){
+			dbh.recon[i,j] <- sum(dbh.recon[i+1, j], trees.gapfilled[i,j]*2, na.rm=T)
 			}
 	}
 }
-min(DBH..cm..recon, na.rm=T)
-DBH..cm..recon[1:10,trees.check]
-summary(DBH..cm..recon[, trees.check])
+min(dbh.recon, na.rm=T)
+dbh.recon[1:10,trees.check]
+summary(dbh.recon[, trees.check])
 #trees.gapfilled[, trees.check]
 tree.data[tree.data$TreeID %in% trees.check,]
 # ---------------------------------------
