@@ -43,7 +43,7 @@ q.blank <- theme(axis.line=element_line(color="black", size=0.5), panel.grid.maj
 
 # Ring.data format: stack all of the core BAI, so that data frame with a SIGNLE BAI column, and then all of the factors in other columns
 ring.data <- read.csv("TreeRWL_AllSites_stacked.csv")
-ring.data$tree <- as.factor(ring.data$tree) 
+ring.data$Tree <- as.factor(ring.data$Tree) 
 summary(ring.data)
 
 # Tree Data
