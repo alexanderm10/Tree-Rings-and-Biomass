@@ -240,6 +240,7 @@ save(gamm.mmf, file="GapFilling_gamm_mmf_02.2015.rData")
 # Making Predicted ring widths
 ring.data.mmf$RW.modeled <- exp(predict(gamm.mmf, ring.data.mmf))
 summary(ring.data.mmf)
+write.csv(ring.data.valles, "GapFilling_MMF_Measured_Filled.csv", row.names=F)
 
 # Graphing of the modeled rings we will use to fill the data (note this isn't truncating ones that are past where we think pith actually is)
 pdf("gamm_gapfill_mmf.pdf", height=7.5, width=10)
@@ -271,7 +272,7 @@ save(gamm.valles, file="GapFilling_gamm_valles_02.2015.rData")
 
 ring.data.valles$RW.modeled <- exp(predict(gamm.valles, ring.data.valles))
 summary(ring.data.valles)
-
+write.csv(ring.data.valles, "GapFilling_Valles_Measured_Filled.csv", row.names=F)
 
 # VERY rough graphing of the modeled rings we will use to fill the data
 pdf("gamm_gapfill_valles.pdf", height=7.5, width=10)
@@ -284,29 +285,6 @@ dev.off()
 # ---------------------------------------
 # ----------------------------------------------------------------
 
-# ----------------------------------------------------------------
-# Create a gapfilled data set
-# ----------------------------------------------------------------
-# ---------------------------------------
-# Data Formatting
-# ---------------------------------------
-# putting the Sites back into 1 file
-dim(ring.data.valles); dim(ring.data.mmf)
-ring.data <- rbind(ring.data.valles, ring.data.mmf)
-
-# putting the modeled data where there are no ring widths (will cause negative DBH..cm.)
-ring.data$RW.gapfilled <- ifelse(is.na(ring.data$RW), ring.data$RW.modeled, ring.data$RW)
-summary(ring.data)
-
-# making a data frame with trees as columns and years as ros
-ring.data$Year <- as.factor(ring.data$Year)
-trees.gapfilled <- recast(ring.data[,c("Year", "TreeID", "RW.gapfilled")], Year ~ TreeID)
-summary(trees.gapfilled)
-
-row.names(trees.gapfilled) <- trees.gapfilled$Year
-trees.gapfilled <- trees.gapfilled[,2:ncol(trees.gapfilled)]
-trees.gapfilled[(nrow(trees.gapfilled)-10):nrow(trees.gapfilled), 1:10]
-# ---------------------------------------
 
 # ################################################################
 # ################################################################
@@ -345,7 +323,7 @@ summary(tree.data)
 
 # creating a data frame of blank ring widths to fill with the gamm
 summary(tree.data.model)
-trees.missing <- tree.data.model[!(tree.data.model$TreeID %in% unique(ring.data$TreeID)), c("Species", "Site", "PlotID", "TreeID")]
+trees.missing <- tree.data.model[!(tree.data.model$TreeID %in% unique(ring.data$TreeID)), c("Species", "Site", "PlotID", "TreeID", "DBH..cm.")]
 summary(trees.missing)# 29 missing trees: 4 from MM, 22 VUF, 3 VLF
 dim(trees.missing)
 
@@ -391,9 +369,43 @@ summary(ring.data)
 
 gamm.missing <- gamm(log(RW) ~ s(Year, bs="cs", k=3, by=PlotID) + DBH..cm., random=list(Species=~1, Site=~1, PlotID=~1), data= ring.data, na.action=na.omit)
 
+par(mfrow=c(3,3))
+plot(gamm.missing$gam)
+
+trees.missing$RW.modeled <- exp(predict(gamm.missing, trees.missing))
+summary(trees.missing)
+write.csv(trees.missing, "GapFilling_Missing_Filled.csv", row.names=F)
+
 # ----------------------------------------------------------------
 
+##################################################################################
+# Create a gapfilled data set
+##################################################################################
+# ---------------------------------------
+# Data Formatting
+# ---------------------------------------
+# putting the Sites back into 1 file
+ring.data.valles <- read.csv("GapFilling_Valles_Measured_Filled.csv")
+ring.data.mmf <- read.csv("GapFilling_MMF_Measured_Filled.csv")
+ring.data.missing <- read.csv("GapFilling_Missing_Filled.csv")
 
+dim(ring.data.valles); dim(ring.data.mmf)
+ring.data <- rbind(ring.data.valles, ring.data.mmf)
+ring.data <- merge(ring.data, ring.data.missing, all.x=T, all.y=T)
+
+# putting the modeled data where there are no ring widths (will cause negative DBH..cm.)
+ring.data$RW.gapfilled <- ifelse(is.na(ring.data$RW), ring.data$RW.modeled, ring.data$RW)
+summary(ring.data)
+
+# making a data frame with trees as columns and years as ros
+ring.data$Year <- as.factor(ring.data$Year)
+trees.gapfilled <- recast(ring.data[,c("Year", "TreeID", "RW.gapfilled")], Year ~ TreeID)
+summary(trees.gapfilled)
+
+row.names(trees.gapfilled) <- trees.gapfilled$Year
+trees.gapfilled <- trees.gapfilled[,2:ncol(trees.gapfilled)]
+trees.gapfilled[(nrow(trees.gapfilled)-10):nrow(trees.gapfilled), 1:10]
+# ---------------------------------------
 
 
 ##################################################################################
@@ -429,21 +441,22 @@ trees.gapfilled <- trees.gapfilled[order(row.names(trees.gapfilled), decreasing=
 trees.gapfilled[1:10, 1:10]
 trees.gapfilled[1:10, (ncol(trees.gapfilled)-10):ncol(trees.gapfilled)]
 
-DBH..cm..recon <- trees.gapfilled
+dbh.recon <- trees.gapfilled
 trees.check <- vector() # trees with negative DBH..cm.
-for(j in names(DBH..cm..recon)){
+for(j in names(dbh.recon)){
+
 	# Step 1: Replace filled years beyond the year in which a tree was sampled with NA (both trees.gapfilled & DBH..cm. recon); 
 	# 	Gapfilled: filling the years where I changed 0 to 1e-6 back to 0
 	#	DBH..cm.recon: fill year of sample with DBH..cm. when sampled
 	trees.gapfilled[as.numeric(row.names(trees.gapfilled))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA
 	trees.gapfilled[,j] <- ifelse(trees.gapfilled[,j]==1e-6, 0, trees.gapfilled[,j])
 
-	DBH..cm..recon[as.numeric(row.names(DBH..cm..recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA
-	DBH..cm..recon[as.numeric(row.names(DBH..cm..recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "DBH..cm."]
+	dbh.recon[as.numeric(row.names(dbh.recon))>tree.data[tree.data$TreeID==j, "Year.sample"],j] <- NA
+	dbh.recon[as.numeric(row.names(dbh.recon))==tree.data[tree.data$TreeID==j, "Year.sample"],j] <- tree.data[tree.data$TreeID==j, "DBH..cm."]
 	
 	# Doing the DBH..cm. reconstruction	
-	for(i in 2:(length(DBH..cm..recon[,j]))){
-		DBH..cm..recon[i,j] <- ifelse(!is.na(trees.gapfilled[i-1,j]), DBH..cm..recon[i-1,j] - trees.gapfilled[i-1,j]*2, DBH..cm..recon[i,j]) # subtracting the previous year's growth from DBH..cm. to get that year's DBH..cm.
+	for(i in 2:(length(dbh.recon[,j]))){
+		dbh.recon[i,j] <- ifelse(!is.na(trees.gapfilled[i-1,j]), dbh.recon[i-1,j] - trees.gapfilled[i-1,j]*2, dbh.recon[i,j]) # subtracting the previous year's growth from DBH..cm. to get that year's DBH..cm.
 	}
 	
 	# Get rid of DBH..cm. past the guestimated pith dates -- both DBH..cm. recon & gapfilled
@@ -452,8 +465,8 @@ for(j in names(DBH..cm..recon)){
 		trees.gapfilled[as.numeric(row.names(trees.gapfilled))<tree.data[tree.data$TreeID==j, "Pith"],j] <- NA
 	} else 
 	if(is.na(tree.data[tree.data$TreeID==j, "Pith"])){ # Get rid of negative modeled DBH..cm.
-		DBH..cm..recon[,j] <- ifelse(DBH..cm..recon[,j]<0, NA, DBH..cm..recon[,j]) 
-		trees.gapfilled[,j] <- ifelse(DBH..cm..recon[,j]<0, NA, trees.gapfilled[,j]) 		
+		dbh.recon[,j] <- ifelse(dbh.recon[,j]<0, NA, dbh.recon[,j]) 
+		trees.gapfilled[,j] <- ifelse(dbh.recon[,j]<0, NA, trees.gapfilled[,j]) 		
 	}
 	# also getting rid of these rings in the stacked ring data too
 	years.na <- row.names(trees.gapfilled)[which(is.na(trees.gapfilled[,j]))]
@@ -483,11 +496,11 @@ summary(DBH..cm..recon[, trees.check])
 #trees.gapfilled[, trees.check]
 tree.data[tree.data$TreeID %in% trees.check,]
 # ---------------------------------------
-write.csv(DBH..cm..recon, "gap_filled_DBH..cm..recon.csv", row.names=T)
-write.csv(trees.gapfilled, "gap_filled_ring.widths.csv", row.names=T)
+write.csv(dbh.recon, "GapFilling_DBHrecon_ALL.csv", row.names=T)
+write.csv(trees.gapfilled, "GapFilling_RingWidths_ALL.csv", row.names=T)
 
 summary(ring.data)
-write.csv(ring.data, "TreeRWL_AllSites_stacked_gapfilled.csv", row.names=F)
+write.csv(ring.data, "TreeRWL_AllSites_stacked_gapfilled_ALL.csv", row.names=F)
 
 ##################################################################################
 # see next script for reconstructing basal area of trees with no samples 
