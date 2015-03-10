@@ -29,20 +29,22 @@ summary(ross.mcon)
 summary(marcy.pipo)
 
 marcy.pipo$density <- 1/(pi*marcy.pipo$Plot_Radius^2)/1e-4
+marcy.pipo$plot <- as.factor(paste(marcy.pipo$Site, marcy.pipo$Plot_Name, sep=""))
 
 summary(marcy.pipo)
 
 
 marcy.mcon$density <- 1/(pi*marcy.mcon$Plot_Radius^2)/1e-4
+marcy.mcon$plot <- as.factor(paste(marcy.mcon$Site, marcy.mcon$Plot_Name, sep=""))
 summary(marcy.mcon)
 #now density is in trees per hectare to match what christy calculated in the DOE spreadsheets.
 
 marcy.valles<- merge(marcy.pipo, marcy.mcon, all.x=T, all.y=T)
 summary(marcy.valles)
 
-marcy.valles <- marcy.valles[,c("Site","Plot_Name", "Tree_Tag_Number","Species", "DBH_1", "density")]
+marcy.valles <- marcy.valles[,c("Site", "Tree_Tag_Number","Species", "DBH_1", "density", "plot")]
 summary(marcy.valles)
-names(marcy.valles)<- c("site", "plot.id", "tree.id", "species", "dbh", "density")
+names(marcy.valles)<- c("site", "tree.id", "species", "dbh", "density", "plot.id")
 summary(marcy.valles)
 
 all.valles<-merge(marcy.valles, ross.valles, all.x=T, all.y=T)
@@ -97,9 +99,24 @@ all.valles$dbh.2 <- round(all.valles$dbh)
 summary(all.valles)
 
 
-valles.plot2 <- aggregate(all.valles$density, by=list(all.valles$site, all.valles$plot.id, all.valles$species, all.valles$dbh2, FUN=sum, na.rm=T)
+valles.plot2 <- aggregate(all.valles$density, by=list(all.valles$site, all.valles$plot.id, all.valles$species, all.valles$dbh.2), FUN=sum, na.rm=T)
 names(valles.plot2) <- c("site", "plot.id", "species", "dbh", "density")
 summary(valles.plot2)
+
+library(car)
+valles.plot2$site2 <- as.factor(ifelse(substr(valles.plot2$site,1,4)=="mcon", "mcon", "ppine"))
+
+unique(valles.plot2$plot.id)
+valles.plot2$plot.id2 <- as.factor(ifelse(substr(valles.plot2$plot.id,1,5)=="PPINE", substr(valles.plot2$plot.id,6,6),
+                                ifelse(substr(valles.plot2$plot.id,1,4)=="MCON", substr(valles.plot2$plot.id,5,5),
+                                       ifelse(substr(valles.plot2$plot.id,3,3)=="A",5, 6))))
+summary(valles.plot2)
+
+qplot(x=dbh, data=valles.plot2, geom="histogram", breaks=dbh.bins1, fill=species, weight=sum(density)/density)+
+  facet_grid(plot.id2 ~ site2)+
+  theme(axis.line=element_line(color="black", size=0.5), panel.grid.major=element_blank(), panel.grid.minor= element_blank(), panel.border= element_blank(), panel.background= element_blank(), axis.text.x=element_text(angle=0, color="black", size=12), axis.text.y=element_text(color="black", size=12)) + 
+  scale_x_continuous(name="DBH")+scale_y_continuous(name="Stems/ha") + ggtitle("Size Distribution weighted by Density") #+ scale_fill_manual(values=as.vector(spp.col.tree$Color))
+
 
 valles.site2 <- aggregate(valles.plot2$density, by=list(valles.plot2$site, valles.plot2$species, valles.plot2$dbh), FUN=mean)
 names(valles.site2) <- c("site", "species", "dbh", "density")
@@ -110,7 +127,8 @@ qplot(x=dbh, data=valles.site2, geom="histogram", breaks=dbh.bins1, fill=species
   theme(axis.line=element_line(color="black", size=0.5), panel.grid.major=element_blank(), panel.grid.minor= element_blank(), panel.border= element_blank(), panel.background= element_blank(), axis.text.x=element_text(angle=0, color="black", size=12), axis.text.y=element_text(color="black", size=12)) + 
   scale_x_continuous(name="DBH")+scale_y_continuous(name="Stems/ha") + ggtitle("Size Distribution weighted by Density") #+ scale_fill_manual(values=as.vector(spp.col.tree$Color))
 
-summary(valles.site2)
+
+
 
 qplot(x=dbh, data=valles.site2, geom="histogram", breaks=dbh.bins1, fill=species, weight=sum(density)/density)+
   facet_grid(site ~ .)+
@@ -120,3 +138,5 @@ qplot(x=dbh, data=valles.site2, geom="histogram", breaks=dbh.bins1, fill=species
 test <- t.test(marcy.pipo$DBH_1, ross.pipo$dbh, na.rm=T)
 summary(test)
 test
+
+

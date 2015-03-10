@@ -1,5 +1,6 @@
+# Comparing Basal Areas to diagnose whether funky VLA is an "US" problem or a Allometry Problem
+
 library(dplR)
-library(ggplot2)
 se <- function(x){
   sd(x, na.rm=TRUE) / sqrt((length(!is.na(x))))}
 # Run this script after the gap filling process scripts have been run
@@ -27,7 +28,8 @@ summary(plot.data)
 
 
 ##########################################################################
-# Allometric Equations
+# Allometric Equations 
+# NOTE: I'm being lazy and leaving everything as "allom", etc, but here it will be Basal Area
 ##########################################################################
 
 
@@ -44,19 +46,13 @@ trees.use$spp.allom <- recode(trees.use$Species, " 'PIEN'='picea.sp'; 'PIPO'='pi
 summary(trees.use)
 plots <- unique(trees.use$PlotID) # You had the right idea, but it was throwing errors because you were trying to evaluate plots you haven't gotten to yet
 
+ggplot(data=trees.use) + facet_wrap(plot~Site)+
+  geom_histogram(aes(DBH..cm., fill=Species))
 
 # will want to do general equations and pft level equations as well, but later
 # log(AGB) = mu0 + mu1*log(DBH) --equaton form of PECAN allometrics
 
-#allom.eq <- function(mu0, mu1, DBH) { mu0 * DBH^mu1}
 allom.eq <- function(mu0, mu1, DBH) { exp(mu0 + mu1 * log(DBH) )}
-
-# dbh <- 1:50
-# test <- allom.eq(mu0= -3.5185,
-#                  mu1 = 2.6909,
-#                  DBH = dbh)
-# 
-# plot(test*.09 ~ dbh)
 
 allom.temp <- g.filled.diam
 allom.temp[,] <- NA
@@ -70,53 +66,41 @@ dim(g.filled.diam)
 bm.array <- array(NA, dim=c(nrow(g.filled.diam), length(unique(trees.use$PlotID)), nrow(allometries[[1]])))
 row.names(bm.array) <- row.names(g.filled.diam)  #CRR Added
 
-summary(bm.array[,,1])
+summary(bm.array)
 #--------------------------------------------------
 # INSERT i LOOP HERE to go through each iteration of randomness from MCMC
-# This is one big loop that goes through each layer of the 500 iterations
+# This is one big loop that goes through each layer of the 50 iterations
 #--------------------------------------------------
 for(i in 1:nrow(allometries[[1]])){
-  allom.temp <- g.filled.diam
-  allom.temp[,] <- NA
+  # Species loop for calculating tree biomass
+  for(j in unique(trees.use$spp.allom)){
+    cols <- which(names(g.filled.diam) %in% trees.use[trees.use$spp.allom==j, "TreeID"])
+    # Note: we'll have to make this a bit fancier in the future for species with mu0==0
+    allom.temp[,cols] <- (((g.filled.diam[,cols])/2)^2)*pi*(1/(100*100)) #cm2 * 1 (m2) / (100*100 cm2)
+  }
+  # summing to the plot level
   
-# Species loop for calculating tree biomass
-for(j in unique(trees.use$spp.allom)){
-  cols <- which(names(g.filled.diam) %in% trees.use[trees.use$spp.allom==j, "TreeID"])
-  # Note: we'll have to make this a bit fancier in the future for species with mu0==0
-#   allom.temp[,cols] <- allom.eq(mu0= -3.5185,
-#                          mu1 = 2.6909,
-#                         #DBH = seq(from=30, to=1, length=nrow(g.filled.diam)))
-#                          DBH = g.filled.diam[,cols])
-# test <- allom.eq(mu0=ifelse(!(allometries[[j]][i,"mu0"]==0 & allometries[[j]][i,"mu1"]==0),allometries[[j]][i,"mu0"], allometries[[j]][i,"Bg0"]),
-#                               mu1 =ifelse(!(allometries[[j]][i,"mu0"]==0 & allometries[[j]][i,"mu1"]==0),allometries[[j]][i,"mu1"], allometries[[j]][i,"Bg1"]),
-#                               DBH = g.filled.diam[,cols])
-  mu0 = ifelse(!(allometries[[j]][i,"mu0"]==0 & allometries[[j]][i,"mu1"]==0),allometries[[j]][i,"mu0"], allometries[[j]][i,"Bg0"])
-  mu1 = ifelse(!(allometries[[j]][i,"mu0"]==0 & allometries[[j]][i,"mu1"]==0),allometries[[j]][i,"mu1"], allometries[[j]][i,"Bg1"])
-  allom.temp[,cols] <- allom.eq(mu0=mu0, mu1 = mu1, DBH = g.filled.diam[,cols])
-}
-# summing to the plot level
-
-allom.temp[is.na(allom.temp)] <- 0
-
-# biomass loop for summing trees to plots
-# We're doing the unit conversions here; we had calculated density in stems/ha, but Christy wants to look at Biomass in kg/m2, so we're putting everything in kg/m2 here
-for(p in 1:length(plots)){
-  cols <- which(names(allom.temp) %in% trees.use[trees.use$PlotID==plots[p], "TreeID"])
-  if(substr(plots[p],1,1)=="V"){
-    bm.array[,p,i] <- rowMeans(allom.temp[,cols])*plot.data[plot.data$PlotID==paste(plots[p]), "Density.Total..stems.ha."]/10000 #mean tree * trees/ha (do for Valles only bc sum of trees != plot density; different sampling method than Neil)
-  } else {
-    temp <- allom.temp[,cols]
-    for(t in names(temp)){ # Convert biomass/tree to biomass/ha
-      temp[,t] <- temp[,t] * tree.data[tree.data$TreeID==t,"Density..stems.ha."]/10000
+  allom.temp[is.na(allom.temp)] <- 0
+  
+  # biomass loop for summing trees to plots
+  # We're doing the unit conversions here; we had calculated density in stems/ha, but Christy wants to look at Biomass in kg/m2, so we're putting everything in kg/m2 here
+  for(p in 1:length(plots)){
+    cols <- which(names(allom.temp) %in% trees.use[trees.use$PlotID==plots[p], "TreeID"])
+    if(substr(plots[p],1,1)=="V"){
+      bm.array[,p,i] <- rowMeans(allom.temp[,cols])*plot.data[plot.data$PlotID==paste(plots[p]), "Density.Total..stems.ha."]/10000 #mean tree * trees/ha (do for Valles only bc sum of trees != plot density; different sampling method than Neil)
+    } else {
+      temp <- allom.temp[,cols]
+      for(t in names(temp)){ # Convert biomass/tree to biomass/ha
+        temp[,t] <- temp[,t] * tree.data[tree.data$TreeID==t,"Density..stems.ha."]/10000
       }
-    bm.array[,p,i] <- rowSums(temp) #sum biomass/ha
+      bm.array[,p,i] <- rowSums(temp) #sum biomass/ha
     }
-}
+  }
 }
 #--------------------------------------------------
 
-#bm.array[,,1]
-summary(bm.array[,,1])
+bm.array[,,1]
+summary(bm.array[,,2])
 
 # OFFENDER: VUF032; VUF026 is good
 g.filled.diam[,c("VUF026","VUF032")]
@@ -128,12 +112,12 @@ biom.sd <- apply(bm.array[,,], c(1,2), sd) # bm.array==the array you're working 
 biom.se <- apply(bm.array[,,], c(1,2), se)
 
 biom.mean <- as.data.frame(biom.mean)
-names(biom.mean)<- plots
+names(biom.mean)<- c("VLA", "VLB", "VUA", "VUB")
 
 biom.sd <-as.data.frame(biom.sd)
-names(biom.sd)<- c(paste(plots, "sd", sep="."))
+names(biom.sd)<- c("VLA.sd", "VLB.sd", "VUA.sd", "VUB.sd")
 biom.se <-as.data.frame(biom.se)
-names(biom.se)<- c(paste(plots, "se", sep="."))
+names(biom.se)<- c("VLA.se", "VLB.se", "VUA.se", "VUB.se")
 
 
 biom.valles <- as.data.frame(c(biom.mean, biom.sd, biom.se))
@@ -147,7 +131,7 @@ head(biom.valles)
 # This we did in a loop above to make it mroe flexible for the future
 # (and we did it right this time)
 #---------------------------------------------------------------------
-# biom.valles.cum.dens <- biom.valles
+ biom.valles.cum.dens <- biom.valles
 # 
 # biom.valles.cum.dens$VLA <- biom.valles.cum.dens$VLA / 144/1000
 # biom.valles.cum.dens$VLA.sd <- biom.valles.cum.dens$VLA.sd /144/1000
@@ -174,40 +158,34 @@ head(biom.valles)
 
 #save(biom.valles.cum.dens, file="biom_valles_dum_m2.csv")
 
-biom.valles.stack <- stack(biom.valles[1:4])
+biom.valles.stack <- stack(biom.valles.cum.dens[1:4])
 names(biom.valles.stack) <- c("Biom.Mean", "PlotID")
-biom.valles.stack$Year <- as.numeric(paste(row.names(biom.valles)))
+biom.valles.stack$Year <- as.numeric(paste(row.names(biom.valles.cum.dens)))
 biom.valles.stack$Plot <- as.factor(substr(biom.valles.stack$PlotID, 3,3))
 biom.valles.stack$Site <- as.factor(substr(biom.valles.stack$PlotID, 1,2))
 summary(biom.valles.stack)
 
-biom.valles.stack.sd <- stack(biom.valles[5:8])
+biom.valles.stack.sd <- stack(biom.valles.cum.dens[5:8])
 names(biom.valles.stack.sd) <- c("Biom.SD", "PlotID")
 
-biom.valles.stack.se <- stack(biom.valles[9:12])
+biom.valles.stack.se <- stack(biom.valles.cum.dens[9:12])
 names(biom.valles.stack.se) <- c("Biom.SE", "PlotID")
 
 biom.valles.stack$Biom.SD <- biom.valles.stack.sd[,1]
 biom.valles.stack$Biom.SE <- biom.valles.stack.se[,1]
 summary(biom.valles.stack)
 
-biom.valles.stack$Ribbon.max <- biom.valles.stack$Biom.Mean + biom.valles.stack$Biom.SD
-biom.valles.stack$Ribbon.min <- biom.valles.stack$Biom.Mean - biom.valles.stack$Biom.SD
-# biom.valles.stack$Ribbon.min <- ifelse(biom.valles.stack$Ribbon.min < 0, 0, biom.valles.stack$Ribbon.min)
-# biom.valles.stack$Ribbon.max <- ifelse(biom.valles.stack$Ribbon.max > 100, 100, biom.valles.stack$Ribbon.max)
-summary(biom.valles.stack)
 
-ggplot(data=biom.valles.stack[biom.valles.stack$Year<2012 & (biom.valles.stack$Site=="VL"),])  + facet_grid(Plot ~ Site) +
+ggplot(data=biom.valles.stack[biom.valles.stack$Year<2012 & (biom.valles.stack$Site=="VU"),])  + facet_grid(Plot ~ Site) +
   # plotting total site basal area  
-  geom_ribbon(aes(x=Year, ymin=Biom.Mean-Biom.SD, ymax=Biom.Mean+Biom.SD, fill=PlotID), alpha=0.5) +
+  geom_ribbon(aes(x=Year, ymin=Biom.Mean-Biom.SE, ymax=Biom.Mean+Biom.SE, fill=PlotID), alpha=0.5) +
   geom_line(aes(x=Year, y=Biom.Mean, color=PlotID)) 
 
-# valles.cum.plot<- 
 ggplot(data=biom.valles.stack[biom.valles.stack$Year<2012,])  + facet_grid(Plot ~ Site) +
   # plotting total site basal area  
-  geom_ribbon(aes(x=Year, ymin=Ribbon.min, ymax=Ribbon.max, fill=PlotID), alpha=0.5) +
-  geom_line(aes(x=Year, y=Biom.Mean, color=PlotID)) +
-   scale_y_continuous(limits=c(0,1000)) #+
+  geom_ribbon(aes(x=Year, ymin=Biom.Mean-Biom.SE, ymax=Biom.Mean+Biom.SE, fill=PlotID), alpha=0.5) +
+  geom_line(aes(x=Year, y=Biom.Mean, color=PlotID))# +
+#scale_y_continuous(limits=c(0,200)) #+
 #   theme(axis.line=element_line(color="black", size=0.5), panel.grid.major=element_blank(), panel.grid.minor= element_blank(), panel.border= element_blank(), panel.background= element_blank(), axis.text.x=element_text(angle=0, color="black", size=12), axis.text.y=element_text(color="black", size=12))+
 #   scale_fill_discrete(name="Model", labels = c("nt.pipo.mean", "nt.piaz.mean", "nt.pine.spp", "nt.vcnp.mean", "nt.pine.dom.mean")))
 
@@ -286,16 +264,16 @@ valles.plot<- ggplot()  +
   geom_line(data= vlf.year, aes(x=year, y=nt.pine.dom.mean), size=1.5,colour="blue") +
   geom_line(data= vlf.bm.avg.gf, aes(x=year, y=jenkins.pine), size=1.5,colour="black") +
   
-
-
-
-
-
-# names(tree.data)
-# 
-# #need to incorporate the density into things
-# jenkins.bm.density <- data.frame(array(NA, dim=c(nrow(mmf.jenkins.recon), ncol(mmf.jenkins.recon))))
-# row.names(jenkins.bm.density) <- row.names(mmf.jenkins.recon)  #CRR Added
+  
+  
+  
+  
+  
+  # names(tree.data)
+  # 
+  # #need to incorporate the density into things
+  # jenkins.bm.density <- data.frame(array(NA, dim=c(nrow(mmf.jenkins.recon), ncol(mmf.jenkins.recon))))
+  # row.names(jenkins.bm.density) <- row.names(mmf.jenkins.recon)  #CRR Added
 # names(jenkins.bm.density)<- names(mmf.jenkins.recon)
 # 
 # for(i in unique(names(mmf.jenkins.recon))){
