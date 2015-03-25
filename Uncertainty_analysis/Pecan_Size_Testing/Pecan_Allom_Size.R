@@ -55,9 +55,10 @@ AllomAve(spp.list,2,outdir=file.path(outdir, "0.1-50"),parm="../data/Table3_GTR-
 ##########################################################################
 # Plotting & running some diagnostics on the allometry with different size cutoffs
 ##########################################################################
-setwd("~/Desktop/PalEON CR/Tree Rings/Tree-Rings-and-Biomass/Uncertainty_analysis/Pecan_Size_Testing")
-
-allom.dir <- "~/Desktop/PalEON CR/Tree Rings/Tree-Rings-and-Biomass/Uncertainty_analysis/Pecan_Size_Testing/PecanAllom/"
+#setwd("~/Desktop/PalEON CR/Tree Rings/Tree-Rings-and-Biomass/Uncertainty_analysis/Pecan_Size_Testing")
+setwd("~/Dropbox/PalEON CR/Tree Rings/Tree-Rings-and-Biomass/Uncertainty_analysis/Pecan_Size_Testing")
+#allom.dir <- "~/Desktop/PalEON CR/Tree Rings/Tree-Rings-and-Biomass/Uncertainty_analysis/Pecan_Size_Testing/PecanAllom/"
+allom.dir <- "~/Dropbox/PalEON CR/Tree Rings/Tree-Rings-and-Biomass/Uncertainty_analysis/Pecan_Size_Testing/PecanAllom/"
 
 allom.eq <- function(mu0, mu1, DBH) { exp(mu0 + mu1 * log(DBH) )}
 
@@ -135,8 +136,8 @@ for(s in spp.list){
 	for(i in 1:nrow(allom.left[[1]])){
 		# mu0 = ifelse(!(allom.left[[s]][i,"mu0"]==0 &  allom.left[[s]][i,"mu1"]==0), allom.left[[s]][i,"mu0"],  allom.left[[s]][i,"Bg0"])
 		# mu1 = ifelse(!(allom.left[[s]][i,"mu0"]==0 &  allom.left[[s]][i,"mu1"]==0), allom.left[[s]][i,"mu1"],  allom.left[[s]][i,"Bg1"])
-		mu0 = allom.right[[s]][i,"Bg0"]
-		mu1 = allom.right[[s]][i,"Bg1"]
+		mu0 = allom.left[[s]][i,"Bg0"]
+		mu1 = allom.left[[s]][i,"Bg1"]
 		temp.left[[s]][,i] <- allom.eq(mu0=mu0, mu1=mu1, DBH=dbh.range)
 	}
 	
@@ -167,8 +168,6 @@ plot(temp.both[[1]][,2])
 full.final <- left.final <- right.final <- both.final <- allom.final.list <- list()
 allom.final <- data.frame()
 
-test <- which(apply(temp.full[[1]], 2, max, na.rm=T)<1e6)
-length(test)
 
 for(s in spp.list){
 #	full.mean <- rowMeans(temp.full[[s]], na.rm=T)
