@@ -128,18 +128,18 @@ g.filled.diam[,c("VUF026","VUF032")]
 ### OUTSIDE of all LOOPs (iteration + species + plots)
 # You should now have a 3-dimensional array with plots as columns, years as rows, and iterations as layers
 biom.mean <- apply(bm.array[,,], c(1,2), mean) # bm.array==the array you're working with, 3 = do the funciton to the layers (3rd dim), mean = the function you're running
-biom.sd <- apply(bm.array[,,], c(1,2), quantile, c(0.025, 0.975)) # bm.array==the array you're working with, 3 = do the funciton to the layers (3rd dim), mean = the function you're running
-biom.se <- apply(bm.array[,,], c(1,2), se)
+biom.ci <- apply(bm.array[,,], c(1,2), quantile, c(0.025, 0.975)) # bm.array==the array you're working with, 3 = do the funciton to the layers (3rd dim), mean = the function you're running
+# biom.se <- apply(bm.array[,,], c(1,2), se)
 
 biom.mean <- as.data.frame(biom.mean)
 names(biom.mean)<- plots
 
-biom.lbound <- data.frame(biom.sd[1,,])
+biom.lbound <- data.frame(biom.ci[1,,])
 names(biom.lbound) <- paste(plots, "LB", sep=".")
-biom.ubound <- data.frame(biom.sd[2,,])
+biom.ubound <- data.frame(biom.ci[2,,])
 names(biom.ubound) <- paste(plots, "UB", sep=".")
-# biom.sd <-as.data.frame(biom.sd)
-# names(biom.sd)<- c(paste(plots, "sd", sep="."))
+# biom.ci <-as.data.frame(biom.ci)
+# names(biom.ci)<- c(paste(plots, "sd", sep="."))
 # biom.se <-as.data.frame(biom.se)
 # names(biom.se)<- c(paste(plots, "se", sep="."))
 
@@ -158,19 +158,19 @@ head(biom.valles)
 # biom.valles.cum.dens <- biom.valles
 # 
 # biom.valles.cum.dens$VLA <- biom.valles.cum.dens$VLA / 144/1000
-# biom.valles.cum.dens$VLA.sd <- biom.valles.cum.dens$VLA.sd /144/1000
+# biom.valles.cum.dens$VLA.ci <- biom.valles.cum.dens$VLA.ci /144/1000
 # biom.valles.cum.dens$VLA.se <- biom.valles.cum.dens$VLA.se /144/1000
 # 
 # biom.valles.cum.dens$VLB <- biom.valles.cum.dens$VLB /624/1000
-# biom.valles.cum.dens$VLB.sd <- biom.valles.cum.dens$VLB.sd /624/1000
+# biom.valles.cum.dens$VLB.ci <- biom.valles.cum.dens$VLB.ci /624/1000
 # biom.valles.cum.dens$VLB.se <- biom.valles.cum.dens$VLB.se /624/1000
 # 
 # biom.valles.cum.dens$VUA <- biom.valles.cum.dens$VUA /576/1000
-# biom.valles.cum.dens$VUA.sd <- biom.valles.cum.dens$VUA.sd /576/1000
+# biom.valles.cum.dens$VUA.ci <- biom.valles.cum.dens$VUA.ci /576/1000
 # biom.valles.cum.dens$VUA.se <- biom.valles.cum.dens$VUA.se /576/1000
 # 
 # biom.valles.cum.dens$VUB <- biom.valles.cum.dens$VUB /576/1000
-# biom.valles.cum.dens$VUB.sd <- biom.valles.cum.dens$VUB.sd /576/1000
+# biom.valles.cum.dens$VUB.ci <- biom.valles.cum.dens$VUB.ci /576/1000
 # biom.valles.cum.dens$VUB.se <- biom.valles.cum.dens$VUB.se /576/1000
 # 
 # summary(biom.valles.cum.dens)
@@ -199,8 +199,8 @@ biom.valles.stack$Biom.LB <- biom.valles.stack.lb[,1]
 biom.valles.stack$Biom.UB <- biom.valles.stack.ub[,1]
 summary(biom.valles.stack)
 
-# biom.valles.stack$Ribbon.max <- biom.valles.stack$Biom.Mean + biom.valles.stack$Biom.SD
-# biom.valles.stack$Ribbon.min <- biom.valles.stack$Biom.Mean - biom.valles.stack$Biom.SD
+# biom.valles.stack$Ribbon.max <- biom.valles.stack$Biom.Mean + biom.valles.stack$Biom.ci
+# biom.valles.stack$Ribbon.min <- biom.valles.stack$Biom.Mean - biom.valles.stack$Biom.ci
 # biom.valles.stack$Ribbon.min <- ifelse(biom.valles.stack$Ribbon.min < 0, 0, biom.valles.stack$Ribbon.min)
 # biom.valles.stack$Ribbon.max <- ifelse(biom.valles.stack$Ribbon.max > 100, 100, biom.valles.stack$Ribbon.max)
 summary(biom.valles.stack)
@@ -250,17 +250,17 @@ head(bm.increment)
 
 
 biom.inc.mean <- apply(bm.increment[,,], c(1,2), mean) # bm.array==the array you're working with, 3 = do the funciton to the layers (3rd dim), mean = the function you're running
-biom.inc.sd <- apply(bm.increment[,,], c(1,2), sd) # bm.array==the array you're working with, 3 = do the funciton to the layers (3rd dim), mean = the function you're running
+biom.inc.ci <- apply(bm.increment[,,], c(1,2), sd) # bm.array==the array you're working with, 3 = do the funciton to the layers (3rd dim), mean = the function you're running
 
 biom.inc.mean <- as.data.frame(biom.inc.mean)
 names(biom.inc.mean)<- c("VLA", "VLB", "VUA", "VUB")
 summary(biom.inc.mean)
 
-biom.inc.sd <-as.data.frame(biom.inc.sd)
-names(biom.inc.sd)<- c("VLA.sd", "VLB.sd", "VUA.sd", "VUB.sd")
-summary(biom.inc.sd)
+biom.inc.ci <-as.data.frame(biom.inc.ci)
+names(biom.inc.ci)<- c("VLA.ci", "VLB.ci", "VUA.ci", "VUB.ci")
+summary(biom.inc.ci)
 
-biom.inc.valles <- as.data.frame(c(biom.inc.mean, biom.inc.sd))
+biom.inc.valles <- as.data.frame(c(biom.inc.mean, biom.inc.ci))
 row.names(biom.inc.valles) <- row.names(biom.inc.mean)
 summary(biom.inc.valles)
 head(biom.inc.valles)
@@ -270,16 +270,16 @@ save(biom.inc.valles, file="biom.valles_inc.csv")
 biom.valles.inc.dens <- biom.inc.valles
 
 biom.valles.inc.dens$VLA <- biom.valles.inc.dens$VLA /144/1000 #*0.59
-biom.valles.inc.dens$VLA.sd <- biom.valles.inc.dens$VLA.sd /144/1000
+biom.valles.inc.dens$VLA.ci <- biom.valles.inc.dens$VLA.ci /144/1000
 
 biom.valles.inc.dens$VLB <- biom.valles.inc.dens$VLB /624/1000 # *0.09
-biom.valles.inc.dens$VLB.sd <- biom.valles.inc.dens$VLB.sd /624/1000
+biom.valles.inc.dens$VLB.ci <- biom.valles.inc.dens$VLB.ci /624/1000
 
 biom.valles.inc.dens$VUA <- biom.valles.inc.dens$VUA /576/1000 #0.11
-biom.valles.inc.dens$VUA.sd <- biom.valles.inc.dens$VUA.sd /576/1000
+biom.valles.inc.dens$VUA.ci <- biom.valles.inc.dens$VUA.ci /576/1000
 
 biom.valles.inc.dens$VUB <- biom.valles.inc.dens$VUB /576/1000 #0.19
-biom.valles.inc.dens$VUB.sd <- biom.valles.inc.dens$VUB.sd /576/1000
+biom.valles.inc.dens$VUB.ci <- biom.valles.inc.dens$VUB.ci /576/1000
 summary(biom.valles.inc.dens)
 
 #now in kilograms of biomass increment per plot
@@ -291,11 +291,11 @@ save(biom.valles.inc.dens, file="valles_bm_inc_m2.csv")
 valles.plot<- ggplot()  +
   # plotting total site basal area
   
-  geom_ribbon(data=vlf.year, aes(x=year, ymin=nt.pipo.mean - 1.96*nt.pipo.sd, ymax=nt.pipo.mean + 1.96*nt.pipo.sd), alpha=0.15, fill="red")+
-  geom_ribbon(data=vlf.year, aes(x=year, ymin=nt.piaz.mean - 1.96*nt.piaz.sd, ymax=nt.piaz.mean + 1.96*nt.piaz.sd), alpha=0.15, fill="orange")+
-  geom_ribbon(data=vlf.year, aes(x=year, ymin=nt.pine.spp.mean - 1.96*nt.pine.spp.sd, ymax=nt.pine.spp.mean + 1.96*nt.pine.spp.sd), alpha=0.15, fill="green")+
-  #geom_ribbon(data=vlf.year, aes(x=year, ymin=nt.vcnp.mean - 1.96*nt.vcnp.sd, ymax=nt.vcnp.mean + 1.96*nt.vcnp.sd), alpha=0.15, fill="purple")+
-  geom_ribbon(data=vlf.year, aes(x=year, ymin=nt.pine.dom.mean - 1.96*nt.pine.dom.sd, ymax=nt.pine.dom.mean + 1.96*nt.pine.dom.sd), alpha=0.15, fill="blue")+
+  geom_ribbon(data=vlf.year, aes(x=year, ymin=nt.pipo.mean - 1.96*nt.pipo.ci, ymax=nt.pipo.mean + 1.96*nt.pipo.ci), alpha=0.15, fill="red")+
+  geom_ribbon(data=vlf.year, aes(x=year, ymin=nt.piaz.mean - 1.96*nt.piaz.ci, ymax=nt.piaz.mean + 1.96*nt.piaz.ci), alpha=0.15, fill="orange")+
+  geom_ribbon(data=vlf.year, aes(x=year, ymin=nt.pine.spp.mean - 1.96*nt.pine.spp.ci, ymax=nt.pine.spp.mean + 1.96*nt.pine.spp.ci), alpha=0.15, fill="green")+
+  #geom_ribbon(data=vlf.year, aes(x=year, ymin=nt.vcnp.mean - 1.96*nt.vcnp.ci, ymax=nt.vcnp.mean + 1.96*nt.vcnp.ci), alpha=0.15, fill="purple")+
+  geom_ribbon(data=vlf.year, aes(x=year, ymin=nt.pine.dom.mean - 1.96*nt.pine.dom.ci, ymax=nt.pine.dom.mean + 1.96*nt.pine.dom.ci), alpha=0.15, fill="blue")+
   
   geom_line(data=vlf.year,  aes(x=year, y=nt.pipo.mean), size=1.5, colour="red") +
   geom_line(data= vlf.year, aes(x=year, y=nt.piaz.mean), size=1.5, colour="orange") +
@@ -387,11 +387,11 @@ valles.plot<- ggplot()  +
 #  
 # 
 # jenkins.site.meter <- data.frame(array(NA, dim=c(nrow(jenkins.plot.meter), 2)))
-# names(jenkins.site.meter) <- c("MMF", "MMF.SD")
+# names(jenkins.site.meter) <- c("MMF", "MMF.ci")
 # row.names(jenkins.site.meter) <- row.names(jenkins.plot.meter)
 # 
 # jenkins.site.meter$MMF <- rowMeans(jenkins.plot.meter)
-# jenkins.site.meter$MMF.SD <- apply(jenkins.plot.meter, 1, sd)
+# jenkins.site.meter$MMF.ci <- apply(jenkins.plot.meter, 1, sd)
 # summary(jenkins.site.meter)
 # head(jenkins.site.meter)
 # write.csv(jenkins.site.meter, "MMF_site_BM_cum.csv")
@@ -430,7 +430,7 @@ valles.plot<- ggplot()  +
 # row.names(jenkins.site.bm.inc) <- row.names(jenkins.site.meter)
 # summary(jenkins.site.bm.inc)
 # jenkins.site.bm.inc$MMF <- rowMeans(jenkins.plot.bm.inc) 
-# jenkins.site.bm.inc$MMF.SD <- apply(jenkins.plot.bm.inc, 1, sd)
+# jenkins.site.bm.inc$MMF.ci <- apply(jenkins.plot.bm.inc, 1, sd)
 # summary(jenkins.site.bm.inc)
 # head(jenkins.site.bm.inc)
 # 
@@ -495,9 +495,9 @@ valles.plot<- ggplot()  +
 # summary(jenkins.site.meter)
 # head(jenkins.spp.meter)
 # 
-# site.spp.bm.cum.SD <- apply(jenkins.spp.meter, c(1:2), FUN=sd, na.rm=T)
-# site.spp.bm.cum.sd <- data.frame(site.spp.bm.cum2); names(site.spp.bm.cum2) <- spp
-# summary(site.spp.bm.cum.SD)
+# site.spp.bm.cum.ci <- apply(jenkins.spp.meter, c(1:2), FUN=sd, na.rm=T)
+# site.spp.bm.cum.ci <- data.frame(site.spp.bm.cum2); names(site.spp.bm.cum2) <- spp
+# summary(site.spp.bm.cum.ci)
 # summary(jenkins.site.meter)
 # head(jenkins.spp.meter)
 # write.csv(site.spp.bm.cum[order(row.names(site.spp.bm.cum), decreasing=F),order(names(site.spp.bm.cum))], "MMF_bm_spp_cum.csv")

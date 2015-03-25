@@ -1,3 +1,15 @@
+####################################################
+# Script to Query Allometry from local Pecan R scripts (not Pecan VM)
+# Christy Rollinson, crollinson@gmail.com
+# --------------------------------------------------
+# Notes: 
+# CR has added a feature in Pecan to eliminate equations or change weighting 
+#   of equations based on diameter distribution of interest
+# As of 24 March 2015, this version is not on the Pecan Mainline, but can be pulled 
+#   for CR's github repository: https://github.com/crollinson/pecan
+# See Pecan_Size_Testing folder for updated scripts to pull allom data using this new method
+####################################################
+
 # Script Querying allometries
 setwd("~/Desktop/pecan/modules/allometry/R")
 
