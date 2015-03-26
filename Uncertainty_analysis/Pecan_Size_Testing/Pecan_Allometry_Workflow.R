@@ -1,7 +1,8 @@
+##############################################
 # Example allometry Workflow Script 
 # Christy Rollinson, crollinson@gmail.com	
 # 25 March 2015
-
+##############################################
 
 ##########################################################################
 # Set Directories, load libraries
@@ -62,14 +63,14 @@ allom.dir <- "~/Dropbox/PalEON CR/Tree Rings/Tree-Rings-and-Biomass/Uncertainty_
 
 allom.eq <- function(mu0, mu1, DBH) { exp(mu0 + mu1 * log(DBH) )}
 
-spp.list <- c("ABBA", "PSME", "ACRU", "ACSA", "QUAL", "QURU")
+
 
 n.samp <- 500 # This number of samples will be pulled from each mc chain
 # ----------------------------------------------------
 # Sampling the different distributions
 # ----------------------------------------------------
 allom.full <- list()
-for(s in spp.list){
+for(s in names(spp.list)){
 	load(paste0(allom.dir, "0.1-500/Allom.", s, ".2.Rdata"))
 	samp.temp <- array()
 	for(i in 1:length(mc)){
@@ -79,7 +80,7 @@ for(s in spp.list){
 }
 
 allom.left <- list()
-for(s in spp.list){
+for(s in names(spp.list)){
 	load(paste0(allom.dir, "10-500/Allom.", s, ".2.Rdata"))
 	samp.temp <- array()
 	for(i in 1:length(mc)){
@@ -89,7 +90,7 @@ for(s in spp.list){
 }
 
 allom.right <- list()
-for(s in spp.list){
+for(s in names(spp.list)){
 	load(paste0(allom.dir, "0.1-50/Allom.", s, ".2.Rdata"))
 	samp.temp <- array()
 	for(i in 1:length(mc)){
@@ -99,7 +100,7 @@ for(s in spp.list){
 }
 
 allom.both <- list()
-for(s in spp.list){
+for(s in names(spp.list)){
 	load(paste0(allom.dir, "10-50/Allom.", s, ".2.Rdata"))
 	samp.temp <- array()
 	for(i in 1:length(mc)){
@@ -116,7 +117,7 @@ temp.full <- temp.left <- temp.right <- temp.both <- list()
 # ------------------------------------------------
 # Creating a distribution of Biomass estimations for 1 example tree
 # ------------------------------------------------
-for(s in spp.list){
+for(s in names(spp.list)){
 	temp.full[[s]] <- array(NA, dim=c(length(1:length(dbh.range)), nrow(allom.full[[1]])))
 	temp.left[[s]] <- array(NA, dim=c(length(1:length(dbh.range)), nrow(allom.left[[1]])))
 	temp.right[[s]] <- array(NA, dim=c(length(1:length(dbh.range)), nrow(allom.right[[1]])))
@@ -124,7 +125,12 @@ for(s in spp.list){
 	
 	# ------------------------------------
 	# Getting MCMC iteration estimations
-	#	Note: the ifelse statement is a safeguard in case one of the allometries ended up with only 1 row from the allometry table being used
+	#	Note: the ifelse statement was originally designed to pull the hierarchical 
+	#   Coefficients by default.  Because there is no hierarchical model when there's
+	#   only 1 equation being used, those scenarios must use the global coeffcients.
+	#
+	#	As of 25 March 2015, there's some weirdness going on with the hierarchical
+	#	coefficients and it's safer to just pull the global coefficients instead
 	# ------------------------------------
 	for(i in 1:nrow(allom.full[[1]])){
 		# mu0 = ifelse(!(allom.full[[s]][i,"mu0"]==0 &  allom.full[[s]][i,"mu1"]==0), allom.full[[s]][i,"mu0"],  allom.full[[s]][i,"Bg0"])
@@ -170,55 +176,32 @@ full.final <- left.final <- right.final <- both.final <- allom.final.list <- lis
 allom.final <- data.frame()
 
 
-for(s in spp.list){
-#	full.mean <- rowMeans(temp.full[[s]], na.rm=T)
+for(s in names(spp.list)){
 	full.mean <- apply(temp.full[[s]], 1, mean, na.rm=T)
 	full.ci <- apply(temp.full[[s]], 1, quantile, c(0.025, 0.975), na.rm=T) 	
 	full.final[[s]] <- data.frame(DBH=dbh.range, Mean=full.mean, LB=full.ci[1,], UB=full.ci[2,], Allom="Full Distribution", Species=s)
 
-	# left.mean <- rowMeans(temp.left[[s]], na.rm=T)
 	left.mean <- apply(temp.left[[s]], 1, mean, na.rm=T)
 	left.ci <- apply(temp.left[[s]], 1, quantile, c(0.025, 0.975), na.rm=T) 	
 	left.final[[s]] <- data.frame(DBH=dbh.range, Mean=left.mean, LB=left.ci[1,], UB=left.ci[2,], Allom="Left-Truncated", Species=s)
 
-	# right.mean <- rowMeans(temp.right[[s]], na.rm=T)
 	right.mean <- apply(temp.right[[s]], 1, mean, na.rm=T)
 	right.ci <- apply(temp.right[[s]], 1, quantile, c(0.025, 0.975), na.rm=T) 	
 	right.final[[s]] <- data.frame(DBH=dbh.range, Mean=right.mean, LB=right.ci[1,], UB=right.ci[2,], Allom="Right-Truncated", Species=s)
 
-#	both.mean <- rowMeans(temp.both[[s]], na.rm=T)
 	both.mean <- apply(temp.both[[s]], 1, mean, na.rm=T)
 	both.ci <- apply(temp.both[[s]], 1, quantile, c(0.025, 0.975), na.rm=T) 	
 	both.final[[s]] <- data.frame(DBH=dbh.range, Mean=both.mean, LB=both.ci[1,], UB=both.ci[2,], Allom="Double-Truncated", Species=s)
 	
-	allom.final.list[[s]] <- rbind(full.final[[s]], left.final[[s]], right.final[[s]], both.final[[s]])
 	allom.final <- rbind(allom.final, full.final[[s]], left.final[[s]], right.final[[s]], both.final[[s]])
 }
 # ------------------------------------------------
-allom.final3 <- rbind(full.final[[6]], left.final[[6]], right.final[[6]], both.final[[6]])
 
 summary(allom.final)
-summary(both.final[["QURU"]])
-plot(both.final$QURU$Mean)
-# doing some tricks to help make the graph look better
-allom.final2 <- allom.final
-allom.final2[allom.final2$UB>25000,"UB"] <- 25000
-allom.final2[allom.final2$LB>25000,"LB"] <- 25000
-allom.final2[allom.final2$Mean>25000,"Mean"] <- NA
 
 q.blank <- theme(axis.line=element_line(color="black", size=0.5), panel.grid.major=element_blank(), panel.grid.minor= element_blank(), panel.border= element_blank(), panel.background= element_blank(), axis.text.x=element_text(angle=0, color="black", size=12), axis.text.y=element_text(color="black", size=12), axis.title.x=element_text(face="bold", size=14),  axis.title.y=element_text(face="bold", size=14))
-
-
-ggplot(data=allom.final2) + facet_wrap(~Species) +
-	geom_ribbon(aes(x=DBH, ymin=LB*1e-3, ymax=UB*1e-3, fill=Allom), alpha=0.25) +
-	geom_line(aes(x=DBH, y=Mean*1e-3, color=Allom, linetype=Allom), size=2) + 
-	scale_y_continuous(name="Biomass (Mg/tree)") +
-	scale_x_continuous(name="DBH (cm)") +
-	q.blank +
-	theme(legend.position=c(0.15, 0.8))
 	
 
-#ggplot(data=allom.final.list[[6]]) + facet_wrap(~Species) +
 ggplot(data=allom.final) + facet_wrap(~Species) +
 	geom_ribbon(aes(x=DBH, ymin=LB, ymax=UB, fill=Allom), alpha=0.25) +
 	geom_line(aes(x=DBH, y=Mean, color=Allom, linetype=Allom), size=2) + 

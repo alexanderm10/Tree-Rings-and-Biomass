@@ -1201,18 +1201,6 @@ plot(pecan.mean ~ dbh.test, col="blue", cex=1, pch=19, xlab="dbh (cm)", ylab="kg
 	points(chaj.chaj.mean ~ dbh.test, col="purple", cex=1, pch=1)#
 	points(all.mean ~ dbh.test, col="orange3", cex=1, pch=19)#
 legend("topleft", legend=c("Pecan Only", "Chajnacky, Pecan eq 3", "Chajnacky, Pre-Pecan", "Both, Pecan Eq 3,4"), col=c("blue", "darkgreen", "purple", "orange3"), pch=19)
-plot(pecan.mean ~ dbh.test, col="blue", cex=1, pch=19, xlab="dbh (cm)", ylab="kg/tree", main="Picea Allometric Equation Comparison",ylim=plot.range)#
-	# points(pecan.native.mean ~ dbh.test, col="red3", cex=1, pch=19)#
-	points(chaj.mean ~ dbh.test, col="darkgreen", cex=1, pch=19)#
-	points(chaj.chaj.mean ~ dbh.test, col="purple", cex=1, pch=1)#
-	points(all.mean ~ dbh.test, col="orange3", cex=1, pch=19)#
-legend("topleft", legend=c("Pecan Only", "Chajnacky, Pecan eq 3", "Chajnacky, Pre-Pecan", "Both, Pecan Eq 3,4"), col=c("blue", "darkgreen", "purple", "orange3"), pch=19)
-plot(pecan.mean ~ dbh.test, col="blue", cex=1, pch=19, xlab="dbh (cm)", ylab="kg/tree", main="Picea Allometric Equation Comparison",ylim=plot.range)#
-	# points(pecan.native.mean ~ dbh.test, col="red3", cex=1, pch=19)#
-	points(chaj.mean ~ dbh.test, col="darkgreen", cex=1, pch=19)#
-	points(chaj.chaj.mean ~ dbh.test, col="purple", cex=1, pch=1)#
-	points(all.mean ~ dbh.test, col="orange3", cex=1, pch=19)#
-legend("topleft", legend=c("Pecan Only", "Chajnacky, Pecan eq 3", "Chajnacky, Pre-Pecan", "Both, Pecan Eq 3,4"), col=c("blue", "darkgreen", "purple", "orange3"), pch=19)
 max(pecan.mean, chaj.mean, chaj.chaj.mean, all.mean)#
 p.range <- c(min(pecan.mean, chaj.mean, chaj.chaj.mean, all.mean),max(pecan.mean, chaj.mean, chaj.chaj.mean, all.mean))
 plot(pecan.mean ~ dbh.test, col="blue", cex=1, pch=19, xlab="dbh (cm)", ylab="kg/tree", main="Picea Allometric Equation Comparison",ylim=p.range)#

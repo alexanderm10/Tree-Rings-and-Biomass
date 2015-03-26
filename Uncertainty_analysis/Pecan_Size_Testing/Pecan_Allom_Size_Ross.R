@@ -1,6 +1,6 @@
-# Example allometry Workflow Script 
-# Christy Rollinson, crollinson@gmail.com	
-# 25 March 2015
+# Script to test out the effects of a new size distribution modification 
+#	to the Pecan allometry functions
+
 
 
 ##########################################################################
@@ -14,7 +14,7 @@ library(ggplot2)
 # Script Querying allometries
 setwd("~/Desktop/pecan/modules/allometry/R")
 
-#outdir <- "~/Dropbox/PalEON CR/Tree Rings/Tree-Rings-and-Biomass/Uncertainty_analysis/AllomFiles/Size_tests" # CR Office
+#outdir <- "~/Dropbox/PalEON CR/Tree Rings/Tree-Rings-and-Biomass/Uncertainty_analysis/Pecan_Size_Testing/RossAllom" # CR Office
 outdir <- "~/Desktop/PalEON CR/Tree Rings/Tree-Rings-and-Biomass/Uncertainty_analysis/Pecan_Size_Testing/PecanAllom" # CR Home
 
 source("AllomAve.R")
@@ -32,24 +32,22 @@ source("read.allom.data.R")
 #    White Oak (802, QUAL)
 #    Northern Red Oak (833, QURU)
 ##########################################################################
-spp.list = list(ABBA = data.frame(spcd=12,acronym="ABBA"),
-				PSME = data.frame(spcd=202,acronym="PSME"),
-				ACRU = data.frame(spcd=316,acronym="ACRU"),
-				ACSA = data.frame(spcd=318,acronym="ACSA"),
-				QUAL = data.frame(spcd=802,acronym="QUAL"),
-				QURU = data.frame(spcd=833,acronym="QURU"))
+species.list = list(
+					# PIPO = data.frame(spcd=122,acronym="PIPO"),
+					PSME = data.frame(spcd=202,acronym="PSME"))
 
 # Querying full range
-AllomAve(spp.list,2,outdir=file.path(outdir, "0.1-500"),parm="../data/Table3_GTR-NE-319.v2.csv",ngibbs=5000, dmin=0.1, dmax=500)
-
-# Querying double-truncated range
-AllomAve(spp.list,2,outdir=file.path(outdir, "10-50"),parm="../data/Table3_GTR-NE-319.v2.csv",ngibbs=5000, dmin=10, dmax=50)
+AllomAve(species.list,2,outdir=file.path(outdir, "0.1-500"),parm="../data/Table3_GTR-NE-319.v2_RossAdendum3.csv",ngibbs=1000, dmin=0.1, dmax=500)
 
 # Querying left-truncated range
-AllomAve(spp.list,2,outdir=file.path(outdir, "10-500"),parm="../data/Table3_GTR-NE-319.v2.csv",ngibbs=5000, dmin=10, dmax=500)
+AllomAve(species.list,2,outdir=file.path(outdir),parm="../data/Table3_GTR-NE-319.v2_RossAdendum3.csv",ngibbs=1000, dmin=6, dmax=500)
 
-# Querying right-truncated range
-AllomAve(spp.list,2,outdir=file.path(outdir, "0.1-50"),parm="../data/Table3_GTR-NE-319.v2.csv",ngibbs=5000, dmin=0.1, dmax=50)
+
+pft.db <- read.csv("~/Desktop/FIA_conversion_v0.2.csv", header=T)
+late.hardwood<- pft.db[pft.db$pft=="LH", c("acronym", "spcd")]
+
+pfts = list(late.hardwood = data.frame(spcd=late.hardwood$spcd,acronym=late.hardwood$acronym))
+AllomAve(pfts,2,outdir=outdir,parm="../data/Table3_GTR-NE-319.v2_RossAdendum2.csv",ngibbs=500, dmin=10, dmax=500)
 
 
 ##########################################################################
@@ -62,9 +60,9 @@ allom.dir <- "~/Dropbox/PalEON CR/Tree Rings/Tree-Rings-and-Biomass/Uncertainty_
 
 allom.eq <- function(mu0, mu1, DBH) { exp(mu0 + mu1 * log(DBH) )}
 
-spp.list <- c("ABBA", "PSME", "ACRU", "ACSA", "QUAL", "QURU")
+#spp.list <- c("ABBA", "PSME", "ACRU", "ACSA", "QUAL", "QURU")
+spp.list <- names(spp.list)
 
-n.samp <- 500 # This number of samples will be pulled from each mc chain
 # ----------------------------------------------------
 # Sampling the different distributions
 # ----------------------------------------------------
@@ -73,7 +71,7 @@ for(s in spp.list){
 	load(paste0(allom.dir, "0.1-500/Allom.", s, ".2.Rdata"))
 	samp.temp <- array()
 	for(i in 1:length(mc)){
-		samp.temp <- rbind(samp.temp, mc[[i]][sample(1:nrow(mc[[i]]), size=n.samp, replace=T),])
+		samp.temp <- rbind(samp.temp, mc[[i]][sample(1:nrow(mc[[i]]), size=500, replace=T),])
 	}
 	allom.full[[s]] <- samp.temp
 }
@@ -83,7 +81,7 @@ for(s in spp.list){
 	load(paste0(allom.dir, "10-500/Allom.", s, ".2.Rdata"))
 	samp.temp <- array()
 	for(i in 1:length(mc)){
-		samp.temp <- rbind(samp.temp, mc[[i]][sample(1:nrow(mc[[i]]), size=n.samp, replace=T),])
+		samp.temp <- rbind(samp.temp, mc[[i]][sample(1:nrow(mc[[i]]), size=500, replace=T),])
 	}
 	allom.left[[s]] <- samp.temp
 }
@@ -93,7 +91,7 @@ for(s in spp.list){
 	load(paste0(allom.dir, "0.1-50/Allom.", s, ".2.Rdata"))
 	samp.temp <- array()
 	for(i in 1:length(mc)){
-		samp.temp <- rbind(samp.temp, mc[[i]][sample(1:nrow(mc[[i]]), size=n.samp, replace=T),])
+		samp.temp <- rbind(samp.temp, mc[[i]][sample(1:nrow(mc[[i]]), size=500, replace=T),])
 	}
 	allom.right[[s]] <- samp.temp
 }
@@ -103,7 +101,7 @@ for(s in spp.list){
 	load(paste0(allom.dir, "10-50/Allom.", s, ".2.Rdata"))
 	samp.temp <- array()
 	for(i in 1:length(mc)){
-		samp.temp <- rbind(samp.temp, mc[[i]][sample(1:nrow(mc[[i]]), size=n.samp, replace=T),])
+		samp.temp <- rbind(samp.temp, mc[[i]][sample(1:nrow(mc[[i]]), size=500, replace=T),])
 	}
 	allom.both[[s]] <- samp.temp
 }
