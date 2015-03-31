@@ -17,32 +17,32 @@ summary(allometries$pipo)
 
 # loading in PSME pecan mcmc runs and making a PSME section within the allometries list. This will be repeate for all species present in the DOE study.
 load("/Users/mrossalexander/Desktop/PEcAn_Allometries/Ross_allometries/Allom.PSME.2.Rdata")
-allometries[["psme"]] <- mc[[3]][sample(which(mc[[3]][,"mu1"]>=0), size=5000, replace=T),]
+allometries[["psme"]] <- mc[[3]][sample(which(mc[[3]][,"mu1"]>=0), size=500, replace=T),]
 summary(allometries)
 summary(allometries$psme)
 
 # loading in ABCO pecan mcmc runs
 load("/Users/mrossalexander/Desktop/PEcAn_Allometries/Ross_allometries/Allom.ABCO.2.Rdata")
-allometries[["abco"]] <- mc[[3]][sample(which(mc[[3]][,"mu1"]>=0), size=5000, replace=T),]
+allometries[["abco"]] <- mc[[3]][sample(which(mc[[3]][,"mu1"]>=0), size=500, replace=T),]
 summary(allometries)
 summary(allometries$abco)
 
 
 # loading in general spruce pecan mcmc runs
 load("/Users/mrossalexander/Desktop/PEcAn_Allometries/Ross_allometries/Allom.PICEA.2.Rdata")
-allometries[["picea.sp"]] <- mc[[3]][sample(which(mc[[3]][,"mu1"]>=0), size=5000, replace=T),]
+allometries[["picea.sp"]] <- mc[[3]][sample(which(mc[[3]][,"mu1"]>=0), size=500, replace=T),]
 summary(allometries)
 summary(allometries$picea.sp)
 
 # loading in general pine pecan mcmc runs
 load("/Users/mrossalexander/Desktop/PEcAn_Allometries/Ross_allometries/Allom.PINUS.2.Rdata")
-allometries[["pinus.sp"]] <- mc[[3]][sample(which(mc[[3]][,"mu1"]>=0), size=5000, replace=T),]
+allometries[["pinus.sp"]] <- mc[[3]][sample(which(mc[[3]][,"mu1"]>=0), size=500, replace=T),]
 summary(allometries)
 summary(allometries$pinus.sp)
 
 # loading in general fir pecan mcmc runs
 load("/Users/mrossalexander/Desktop/PEcAn_Allometries/Ross_allometries/Allom.ABIES.2.Rdata")
-allometries[["abies.sp"]] <- mc[[3]][sample(which(mc[[3]][,"mu1"]>=0), size=5000, replace=T),]
+allometries[["abies.sp"]] <- mc[[3]][sample(which(mc[[3]][,"mu1"]>=0), size=500, replace=T),]
 summary(allometries)
 summary(allometries$abies.sp)
 

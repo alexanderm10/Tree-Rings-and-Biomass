@@ -27,15 +27,28 @@ summary(ross.mcon)
 
 # Calculating density per plot for Marcy's data; she used 10m plots
 summary(marcy.pipo)
-
-marcy.pipo$density <- 1/(pi*marcy.pipo$Plot_Radius^2)/1e-4
 marcy.pipo$plot <- as.factor(paste(marcy.pipo$Site, marcy.pipo$Plot_Name, sep=""))
+
+
+marcy.pipo$count.plot <- ifelse(marcy.pipo$plot=="PPINE1", length(which(marcy.pipo$plot == "PPINE1")),
+                                ifelse(marcy.pipo$plot=="PPINE2", length(which(marcy.pipo$plot == "PPINE2")),
+                                       ifelse(marcy.pipo$plot=="PPINE3", length(which(marcy.pipo$plot == "PPINE3")),
+                                              ifelse(marcy.pipo$plot=="PPINE4", length(which(marcy.pipo$plot == "PPINE4")), ""))))
+marcy.pipo$count.plot <- as.numeric(marcy.pipo$count.plot)
+marcy.pipo$density <- marcy.pipo$count.plot/(pi*marcy.pipo$Plot_Radius^2)/1e-4
 
 summary(marcy.pipo)
 
-
-marcy.mcon$density <- 1/(pi*marcy.mcon$Plot_Radius^2)/1e-4
 marcy.mcon$plot <- as.factor(paste(marcy.mcon$Site, marcy.mcon$Plot_Name, sep=""))
+marcy.mcon$count.plot <- ifelse(marcy.mcon$plot=="MCON1", length(which(marcy.mcon$plot == "MCON1")),
+                                ifelse(marcy.mcon$plot=="MCON2", length(which(marcy.mcon$plot == "MCON2")),
+                                    ifelse(marcy.mcon$plot=="MCON3", length(which(marcy.mcon$plot == "MCON3")),
+                                        ifelse(marcy.mcon$plot=="MCON4", length(which(marcy.mcon$plot == "MCON4")), ""))))
+
+marcy.mcon$count.plot <- as.numeric(marcy.mcon$count.plot)
+
+marcy.mcon$density <- marcy.mcon$count.plot/(pi*marcy.mcon$Plot_Radius^2)/1e-4
+
 summary(marcy.mcon)
 #now density is in trees per hectare to match what christy calculated in the DOE spreadsheets.
 
@@ -138,5 +151,9 @@ qplot(x=dbh, data=valles.site2, geom="histogram", breaks=dbh.bins1, fill=species
 test <- t.test(marcy.pipo$DBH_1, ross.pipo$dbh, na.rm=T)
 summary(test)
 test
+
+####################################################
+# converting Marcy's numbers to biomass
+####################################################
 
 
