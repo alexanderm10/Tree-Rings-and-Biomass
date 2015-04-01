@@ -14,8 +14,8 @@ library(ggplot2)
 # Script Querying allometries
 setwd("~/Desktop/pecan/modules/allometry/R")
 
-#outdir <- "~/Dropbox/PalEON CR/Tree Rings/Tree-Rings-and-Biomass/Uncertainty_analysis/AllomFiles/Size_tests" # CR Office
-outdir <- "~/Desktop/PalEON CR/Tree Rings/Tree-Rings-and-Biomass/Uncertainty_analysis/Pecan_Size_Testing/PecanAllom" # CR Home
+outdir <- "~/Dropbox/PalEON CR/Tree Rings/Tree-Rings-and-Biomass/Uncertainty_analysis/Pecan_Size_Testing/PecanAllom" # CR Office
+#outdir <- "~/Desktop/PalEON CR/Tree Rings/Tree-Rings-and-Biomass/Uncertainty_analysis/Pecan_Size_Testing/PecanAllom" # CR Home
 
 source("AllomAve.R")
 source("query.allom.data.R")
@@ -38,6 +38,11 @@ spp.list = list(ABBA = data.frame(spcd=12,acronym="ABBA"),
 				ACSA = data.frame(spcd=318,acronym="ACSA"),
 				QUAL = data.frame(spcd=802,acronym="QUAL"),
 				QURU = data.frame(spcd=833,acronym="QURU"))
+
+spp.list = list(FAGR = data.frame(spcd=531, acronym="FAGR"))
+
+AllomAve(spp.list,2,outdir=file.path(outdir),parm="../data/Table3_GTR-NE-319.v2.csv",ngibbs=100, dmin=6, dmax=500)
+
 
 # Querying full range
 AllomAve(spp.list,2,outdir=file.path(outdir, "0.1-500"),parm="../data/Table3_GTR-NE-319.v2.csv",ngibbs=5000, dmin=0.1, dmax=500)
