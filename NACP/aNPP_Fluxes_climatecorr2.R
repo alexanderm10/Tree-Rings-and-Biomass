@@ -19,7 +19,7 @@ mmf.chrono <- ts(read.csv("chron_all_mmfspp.csv"), end=2014, frequency =1)
 niwot.nep.m <- ts(read.table("monthly_nep_niwot.txt", header=T), end = 2013, frequency =1)
 
 #The Morgan Monroe flux record spans 1999-2005
-mmf.nep.m <- ts(read.table("monthly_nep_morgan.txt", header=T), end = 2005, frequency = 1)
+mmf.nep.m <- ts(read.table("MMS_L2gapfilled_NEE_monthly.txt", header=T), end = 2005, frequency = 1)
 
 # this code comes from Flurin's climate_response.r file
 

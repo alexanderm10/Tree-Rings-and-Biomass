@@ -5,18 +5,22 @@ library(ggplot2)
 
 nep.niwot <- ts(read.table("monthly_nep_niwot.txt", header = T), end = 2013, frequency = 1)
 
-nep.morgan <- ts(read.table("monthly_nep_morgan.txt", header = T), end = 2005, frequency = 1)
+nep.morgan.annual <- ts(read.table("MMS_L2gapfilled_NEE_annual.txt", header = T), end = 2013, frequency = 1)
+summary(nep.morgan.annual)
 
-
+#changing from NEE to NEP
+nep.morgan.annual <- nep.morgan.annual[,2]*-1
+plot(nep.morgan.annual, type="l")
+summary(nep.morgan.annual)
 
 bioB.niwot <- ts(read.table("site_biomass_increment_recon_plotB_kg_per_ha.txt",header = T)/10,end = 2012, frequency = 1)    #/10 to convert kg/ha into g/m2
 bioC.niwot <- ts(read.table("site_biomass_increment_recon_plotC_kg_per_ha.txt",header = T)/10,end = 2012, frequency = 1)
 bio.niwot.all <- ts(apply(ts.union(bioB.niwot[,1],bioC.niwot[,1]),1,mean,na.rm = T),end = 2012,frequency = 1)
-# bio.niwot.fir <- bio.niwot.all <- ts(apply(ts.union(all.niwot[,2],bioC.niwot[,2]),1,mean,na.rm = T),end = 2012,frequency = 1)
-#  bio.niwot.pine <- bio.niwot.all <- ts(apply(ts.union(all.niwot[,3],bioC.niwot[,3]),1,mean,na.rm = T),end = 2012,frequency = 1) 
-#  bio.niwot.spruce <- bio.niwot.all <- ts(apply(ts.union(all.niwot[,4],bioC.niwot[,4]),1,mean,na.rm = T),end = 2012,frequency = 1)
+# bio.niwot.fir <- bio.niwot.all <- ts(apply(ts.union(bio.niwot.all[,2],bioC.niwot[,2]),1,mean,na.rm = T),end = 2012,frequency = 1)
+#  bio.niwot.pine <- bio.niwot.all <- ts(apply(ts.union(bio.niwot.all[,3],bioC.niwot[,3]),1,mean,na.rm = T),end = 2012,frequency = 1) 
+#  bio.niwot.spruce <- bio.niwot.all <- ts(apply(ts.union(bio.niwot.all[,4],bioC.niwot[,4]),1,mean,na.rm = T),end = 2012,frequency = 1)
 
- bio.niwot.all<- ts.union(bio.niwot.all, bio.niwot.fir, bio.niwot.spruce, bio.niwot.pine, end= 2012, frequency =1)
+#  bio.niwot.all<- ts.union(bio.niwot.all, bio.niwot.fir, bio.niwot.spruce, bio.niwot.pine, end= 2012, frequency =1)
  summary(bio.niwot.all)
  
  
@@ -66,16 +70,17 @@ head(mmf.plotting.inc)
 ################################################
 
 nep.niwot.annual <- ts(apply(nep.niwot,1,sum,na.rm = T),end = 2012, frequency = 1)
-nep.morgan.annual <- ts(apply(nep.morgan,1,sum,na.rm = T),end = 2005, frequency = 1)
+#nep.morgan.annual <- ts(apply(nep.morgan$agg_NEE_month,1,sum,na.rm = T),end = 2012, frequency = 1)
 
 forcomp.niwot <- window(ts.union(nep.niwot.annual, bio.niwot.all*0.5),start = 1999,end = 2012)  # multiplying the TR BMinc. to get the amount of carbon; lets us compare with the tower.
-forcomp.morgan.all <- window(ts.union(nep.morgan.annual, all.morgan.increment*0.5),start = 1999,end = 2005)
-forcomp.morgan.spp <- window(ts.union(nep.morgan.annual, mmf.spp.increment*0.5),start = 1999,end = 2005)
+forcomp.morgan.all <- window(ts.union(nep.morgan.annual, all.morgan.increment*0.5),start = 1999,end = 2013)
+forcomp.morgan.spp <- window(ts.union(nep.morgan.annual, mmf.spp.increment*0.5),start = 1999,end = 2013)
  
 dim(forcomp.morgan.all) 
 dim(forcomp.morgan.spp)
  
- summary(forcomp.niwot)
+summary(forcomp.niwot)
+summary(forcomp.morgan.all)
 
 par(new=F)
 par(cex=2, tck=0.03, mar=c(4, 4.25, 2.5, 1)) 
@@ -91,10 +96,10 @@ plot(forcomp.niwot[,2], type="l", lty="dotdash", col="darkgreen", xlim=c(1999,20
  
  
 ratio.niwot <- forcomp.niwot[,2:5]/forcomp.niwot[,1]
-ratio.morgan.all <- ts(forcomp.morgan.all[,2]/forcomp.morgan.all[,1], start=1999, end=2005)
-ratio.morgan.spp <- ts(forcomp.morgan.spp[,2:12]/forcomp.morgan.spp[,1], start = 1999, end = 2005)
+ratio.morgan.all <- ts(forcomp.morgan.all[,2]/forcomp.morgan.all[,1], start=1999, end=2013)
+ratio.morgan.spp <- ts(forcomp.morgan.spp[,2:12]/forcomp.morgan.spp[,1], start = 1999, end = 2013)
 
-ratio.morgan.combo <- window(ts.union(ratio.morgan.all, ratio.morgan.spp), start = 1999, end =2005)
+ratio.morgan.combo <- window(ts.union(ratio.morgan.all, ratio.morgan.spp), start = 1999, end =2013)
 
 ratio.morgan.combo<-as.data.frame(ratio.morgan.combo)
 head(ratio.morgan.combo)

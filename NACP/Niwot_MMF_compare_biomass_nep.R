@@ -4,7 +4,7 @@ nep.niwot <- ts(read.table("monthly_nep_niwot.txt", header = T), end = 2013, fre
 
 
 
-nep.morgan <- ts(read.table("monthly_nep_morgan.txt", header = T), end = 2005, frequency = 1)
+nep.morgan <- ts(read.table("MMS_L2gapfilled_NEE_monthly.txt", header = T), end = 2005, frequency = 1)
 
 
 

@@ -1,4 +1,4 @@
-setwd("~/Dropbox/PalEON CR/Tree Rings/Tree-Rings-and-Biomass/Uncertainty_analysis")
+#setwd("~/Dropbox/PalEON CR/Tree Rings/Tree-Rings-and-Biomass/Uncertainty_analysis")
 
 library(dplR)
 library(ggplot2)
