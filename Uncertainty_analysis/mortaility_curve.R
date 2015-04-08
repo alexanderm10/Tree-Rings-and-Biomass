@@ -132,6 +132,12 @@ lines(vub.density.ci[2,]~ names(vub.density), lty="dashed")
 
 mort.list <- list(vla.density, vlb.density, vua.density, vub.density)
 mort.ci.list <- list(vla.density.ci, vlb.density.ci, vua.density.ci, vub.density.ci)
+names(mort.list) <- names(mort.ci.list) <- c("VLA", "VLB", "VUA", "VUB")
+summary(mort.list)
+
+summary(mort.ci.list[[1]])
+names(mort.ci.list) <- names(mort.ci.list) <- c("VLA", "VLB", "VUA", "VUB")
+
 
 #####################################################
 # applying changing densities to the biomass estimate
@@ -154,6 +160,8 @@ summary(trees.use)
 
 plot.data <- read.csv("raw input files/DOE_plus_Valles.csv")
 summary(plot.data)
+
+
 
 ##########################################################################
 # Allometric Equations
@@ -223,11 +231,15 @@ summary(bm.array[,,1])
     if(substr(plots[p],1,1)=="V"){
       bm.array[,p,i] <- rowMeans(allom.temp[,cols])*plot.data[plot.data$PlotID==paste(plots[p]), "Density.Total..stems.ha."]/10000 #mean tree * trees/ha (do for Valles only bc sum of trees != plot density; different sampling method than Neil)
     } else {
-      temp <- allom.temp[,cols]
+      temp1 <- temp2 <- temp3 <- allom.temp[,cols]
       for(t in names(temp)){ # Convert biomass/tree to biomass/ha
-        temp[,t] <- temp[,t] * tree.data[tree.data$TreeID==t,"Density..stems.ha."]/10000
+        temp1[,t] <- temp1[,t] * mort.list[[plots[p]]]
+        temp2[,t] <- temp2[,t] * mort.list[[plots[p]]][2,]
+        temp3[,t] <- temp3[,t] * mort.list[[plots[p]]][1,]
       }
-      bm.array[,p,i] <- rowSums(temp) #sum biomass/ha
+      bm.array.mean[,p,i] <- rowSums(temp1) #sum biomass/ha
+      bm.array.hi[,p,i] <- rowSums(temp2) #sum biomass/ha
+      bm.array.lo[,p,i] <- rowSums(temp3) #sum biomass/ha
     }
   }
 

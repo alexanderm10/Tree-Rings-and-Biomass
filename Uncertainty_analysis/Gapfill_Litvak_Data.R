@@ -109,7 +109,7 @@ names(marcy.mcon)
 
 # Merging the two into 1 data frame and doing a bit of formatting
 marcy <- rbind(marcy.ppine[,names(marcy.ppine) %in%  names(marcy.mcon)], marcy.mcon)
-marcy$PlotID <- as.factor(paste(marcy$Site, marcy$Transect, sep="."))
+marcy$PlotID <- as.factor(paste(marcy$Site, marcy$Plot_Name, sep="."))
 names(marcy)[16] <- "DBH..cm." 
 marcy$Tree_Tag_Number <- as.factor(marcy$Tree_Tag_Number)
 summary(marcy)

@@ -36,6 +36,7 @@ summary(plot.data)
 #Convert to biomass with the allometric equation
 #using the PECAN generated bayesian equations
 library(car)
+load("allometries_list.Rdata")
 
 # Getting rid of POTR for now for conceptual figure purposes
 trees.use <- trees.use[!(trees.use$Species=="POTR"),]
@@ -149,6 +150,7 @@ row.names(biom.valles) <- row.names(biom.mean)
 summary(biom.valles)
 head(biom.valles)
 
+save(biom.valles, file="valles_bm_recon.Rdata")
 #save(biom.valles, file="biom.valles_cum.csv")
 
 #---------------------------------------------------------------------
@@ -204,6 +206,8 @@ summary(biom.valles.stack)
 # biom.valles.stack$Ribbon.min <- ifelse(biom.valles.stack$Ribbon.min < 0, 0, biom.valles.stack$Ribbon.min)
 # biom.valles.stack$Ribbon.max <- ifelse(biom.valles.stack$Ribbon.max > 100, 100, biom.valles.stack$Ribbon.max)
 summary(biom.valles.stack)
+
+save(biom.valles.stack, file="valles_bm_recon_stack.Rdata")
 
 ggplot(data=biom.valles.stack[biom.valles.stack$Year<2012 & (biom.valles.stack$Site=="VL"),])  + facet_grid(Plot ~ Site) +
   # plotting total site basal area  
