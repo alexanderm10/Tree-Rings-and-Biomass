@@ -21,6 +21,9 @@ summary(tree.data)
 trees.use <- tree.data[substr(tree.data$PlotID, 1, 1)=="V",]
 summary(trees.use)
 
+summary(trees.use[substr(trees.use$PlotID, 1, 2)=="VU",])
+summary(trees.use[substr(trees.use$PlotID, 1, 2)=="VL",])
+
 #quick plot
 #spag.plot(g.filled.diam)
 

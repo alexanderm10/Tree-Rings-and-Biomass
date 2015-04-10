@@ -349,6 +349,8 @@ biom.mort.valles.stack$Biom.LB <- biom.mort.valles.stack.lb[,1]
 biom.mort.valles.stack$Biom.UB <- biom.mort.valles.stack.ub[,1]
 summary(biom.mort.valles.stack)
 
+
+save(biom.mort.valles.stack, file="valles_bm_mortality_corrected_stack.Rdata")
 load("valles_bm_recon_stack.Rdata")
 
 ggplot(data=biom.mort.valles.stack[biom.mort.valles.stack$Year<2012 & (biom.mort.valles.stack$Site=="VL"),])  + facet_grid(Plot ~ Site) +
