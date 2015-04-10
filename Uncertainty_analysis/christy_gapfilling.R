@@ -298,7 +298,7 @@ dev.off()
 # ----------------------------------------------------------------
 # Ring.data format: stack all of the core BAI, so that data frame with a SIGNLE BAI column, and then all of the factors in other columns
 ring.data <- read.csv("TreeRWL_AllSites_stacked.csv")
-ring.data$tree <- as.factor(ring.data$tree) 
+ring.data$Tree <- as.factor(ring.data$Tree) 
 summary(ring.data)
 
 # Tree Data
@@ -306,7 +306,7 @@ tree.data <- read.csv("TreeData.csv")
 summary(tree.data)
 
 # Site Data (for year cored) 
-Site.data <- read.csv("input files/DOE_plus_valles.csv", na.strings="")
+Site.data <- read.csv("raw input files/DOE_plus_valles.csv", na.strings="")
 Site.data$Year.sample <- as.numeric(substr(Site.data$date.sample,7,10))
 summary(Site.data)
 
@@ -367,7 +367,15 @@ summary(trees.missing)
 ring.data$RW <- ifelse(ring.data$RW==0, 1e-6, ring.data$RW)
 summary(ring.data)
 
-gamm.missing <- gamm(log(RW) ~ s(Year, bs="cs", k=3, by=PlotID) + DBH..cm., random=list(Species=~1, Site=~1, PlotID=~1), data= ring.data, na.action=na.omit)
+
+ring.data$Species.Model <- ring.data$Species
+summary(ring.data)
+
+summary(trees.missing$Species)
+trees.missing$Species.Model <- recode(trees.missing$Species, "'POTR'='POGR'")
+summary(trees.missing)
+
+gamm.missing <- gamm(log(RW) ~ s(Year, bs="cs", k=3, by=PlotID) + DBH..cm., random=list(Species.Model=~1, Site=~1, PlotID=~1), data= ring.data, na.action=na.omit)
 
 # par(mfrow=c(3,3))
 # plot(gamm.missing$gam)
@@ -498,6 +506,8 @@ tree.data[tree.data$TreeID %in% trees.check,]
 # ---------------------------------------
 write.csv(dbh.recon, "GapFilling_DBHrecon_ALL.csv", row.names=T)
 write.csv(trees.gapfilled, "GapFilling_RingWidths_ALL.csv", row.names=T)
+
+summary(trees.gapfilled)
 
 summary(ring.data)
 write.csv(ring.data, "TreeRWL_AllSites_stacked_gapfilled_ALL.csv", row.names=F)

@@ -2,17 +2,17 @@
 # used interior numbers start year 1979 and end year 2011
 # used to change densities for the valles 
 
-start.m <- rnorm(1000, mean=0.4843, sd= 0.2823)
-rate.m <- rnorm(1000, mean= 0.024, sd= 0.027)
+start.m <- rnorm(5000, mean=0.4843, sd= 0.2823)
+rate.m <- rnorm(5000, mean= 0.024, sd= 0.027)
 
 
 start.yr = 1979
 end.yr = 2011
 
-mort.rate <- data.frame(array(dim=c(1000, 33)))
+mort.rate <- data.frame(array(dim=c(5000, length(start.yr:end.yr))))
 names(mort.rate) <- start.yr:end.yr
 
-for(j in 1:1000){
+for(j in 1:5000){
   mort.rate[j,1] = sample(start.m, size=1, replace=T)
   
   for(i in 2:length(mort.rate)){
@@ -45,8 +45,8 @@ vla.density
 vla.density.ci <-  data.frame(array(dim=c(nrow(ci), ncol(ci)))) 
 rownames(vla.density.ci) <- row.names(ci)
 row.names(vla.density.ci) <- names(ci.mort.rate)
-vla.density.ci <-  ci 
-vla.density.ci[,] <- 0.590278
+vla.density.ci <-  ci.mort.rate 
+vla.density.ci[] <- 0.590278
 
 for(j in 1:nrow(vla.density.ci)){
   for(i in 2:ncol(vla.density.ci)){
@@ -69,8 +69,8 @@ vlb.density
 vlb.density.ci <-  data.frame(array(dim=c(nrow(ci), ncol(ci)))) 
 rownames(vlb.density.ci) <- row.names(ci)
 row.names(vlb.density.ci) <- names(ci.mort.rate)
-vlb.density.ci <-  ci 
-vlb.density.ci[,] <- 0.089744
+vlb.density.ci <-  ci.mort.rate 
+vlb.density.ci[] <- 0.089744
 
 for(j in 1:nrow(vlb.density.ci)){
   for(i in 2:ncol(vlb.density.ci)){
@@ -94,8 +94,8 @@ vua.density
 vua.density.ci <-  data.frame(array(dim=c(nrow(ci), ncol(ci)))) 
 rownames(vua.density.ci) <- row.names(ci)
 row.names(vua.density.ci) <- names(ci.mort.rate)
-vua.density.ci <-  ci 
-vua.density.ci[,] <- 0.111111
+vua.density.ci <-  ci.mort.rate  
+vua.density.ci[] <- 0.111111
 
 for(j in 1:nrow(vua.density.ci)){
   for(i in 2:ncol(vua.density.ci)){
@@ -118,8 +118,8 @@ vub.density
 vub.density.ci <-  data.frame(array(dim=c(nrow(ci), ncol(ci)))) 
 rownames(vub.density.ci) <- row.names(ci)
 row.names(vub.density.ci) <- names(ci.mort.rate)
-vub.density.ci <-  ci 
-vub.density.ci[,] <- 0.194444
+vub.density.ci <-  ci.mort.rate 
+vub.density.ci[] <- 0.194444
 
 for(j in 1:nrow(vub.density.ci)){
   for(i in 2:ncol(vub.density.ci)){
@@ -130,14 +130,37 @@ plot(vub.density~names(vub.density), type="l", ylim=range(vub.density.ci))
 lines(vub.density.ci[1,]~names(vub.density), lty="dashed")
 lines(vub.density.ci[2,]~ names(vub.density), lty="dashed")
 
-mort.list <- list(vla.density, vlb.density, vua.density, vub.density)
-mort.ci.list <- list(vla.density.ci, vlb.density.ci, vua.density.ci, vub.density.ci)
-names(mort.list) <- names(mort.ci.list) <- c("VLA", "VLB", "VUA", "VUB")
+
+vla.density <- vla.density[order(names(vla.density), decreasing=T)]
+
+
+vla.density.ci <- vla.density.ci[,sort(colnames(vla.density.ci), decreasing=T)]
+
+vlb.density <- vlb.density[order(names(vlb.density), decreasing=T)]
+
+
+vlb.density.ci <- vlb.density.ci[,sort(colnames(vlb.density.ci), decreasing=T)]
+
+vua.density <- vua.density[order(names(vua.density), decreasing=T)]
+
+
+vua.density.ci <- vua.density.ci[,sort(colnames(vua.density.ci), decreasing=T)]
+
+vub.density <- vub.density[order(names(vub.density), decreasing=T)]
+
+
+vub.density.ci <- vub.density.ci[,sort(colnames(vub.density.ci), decreasing=T)]
+
+
+mort.list <- array(list(vua.density, vub.density, vla.density, vlb.density))
+
+mort.ci.list <- array(list(vua.density.ci, vub.density.ci, vla.density.ci, vlb.density.ci))
+
+
+names(mort.list) <- names(mort.ci.list) <- c("VUA", "VUB", "VLA", "VLB")
 summary(mort.list)
 
-summary(mort.ci.list[[1]])
-names(mort.ci.list) <- names(mort.ci.list) <- c("VLA", "VLB", "VUA", "VUB")
-
+summary(mort.ci.list)
 
 #####################################################
 # applying changing densities to the biomass estimate
@@ -147,9 +170,14 @@ library(ggplot2)
 se <- function(x){
   sd(x, na.rm=TRUE) / sqrt((length(!is.na(x))))}
 
-g.filled.diam <- read.csv("gap_filled_dbh.recon.csv", header=T, row.names=1)
+g.filled.diam <- read.csv("GapFilling_DBHrecon_ALL.csv", header=T, row.names=1)
 g.filled.diam <- g.filled.diam[,substr(names(g.filled.diam),1,1)=="V"]
 summary(g.filled.diam)
+head(g.filled.diam)
+
+#need to truncate the diameter time series to be the same as the mortality curve time series
+g.filled.diam <- g.filled.diam[row.names(g.filled.diam)>=1979 & row.names(g.filled.diam)<=2011,]
+
 
 # read in tree data
 tree.data <- read.csv("TreeData.csv", header=T)
@@ -171,13 +199,13 @@ summary(plot.data)
 #Convert to biomass with the allometric equation
 #using the PECAN generated bayesian equations
 library(car)
-
+load("allometries_list.Rdata")
 # Getting rid of POTR for now for conceptual figure purposes
-trees.use <- trees.use[!(trees.use$Species=="POTR"),]
+#trees.use <- trees.use[!(trees.use$Species=="POTR"),]
 summary(trees.use)
 unique(trees.use$Species)
 
-trees.use$spp.allom <- recode(trees.use$Species, " 'PIEN'='picea.sp'; 'PIPO'='pipo'; 'PSME'='psme'")
+trees.use$spp.allom <- recode(trees.use$Species, " 'PIEN'='picea.sp'; 'PIPO'='pipo'; 'PSME'='psme'; 'POTR' = 'potr'")
 summary(trees.use)
 plots <- unique(trees.use$PlotID) # You had the right idea, but it was throwing errors because you were trying to evaluate plots you haven't gotten to yet
 
@@ -198,10 +226,33 @@ summary(g.filled.diam)
 dim(g.filled.diam)
 
 #want to set up an array that has the layers 1) the time series of biomass 2) mean mortality numbers at the plot level 3) confidence intervals for the plots
-bm.array <- array(NA, dim=c(nrow(g.filled.diam), length(unique(trees.use$PlotID)), ncol(allometries[[1]])))
-row.names(bm.array) <- row.names(g.filled.diam)  #CRR Added
+bm.array.mean <- array(NA, dim=c(nrow(g.filled.diam), length(unique(trees.use$PlotID)), nrow(allometries[[1]])))
+bm.array.high <- array(NA, dim=c(nrow(g.filled.diam), length(unique(trees.use$PlotID)), nrow(allometries[[1]])))
+bm.array.low <- array(NA, dim=c(nrow(g.filled.diam), length(unique(trees.use$PlotID)), nrow(allometries[[1]])))
 
-summary(bm.array[,,1])
+
+
+row.names(bm.array.mean) <- row.names(g.filled.diam)  #CRR Added
+row.names(bm.array.high) <- row.names(g.filled.diam)  #CRR Added
+row.names(bm.array.low) <- row.names(g.filled.diam)  #CRR Added
+
+dimnames(bm.array.mean)[[2]] <- unique(trees.use$PlotID)
+dimnames(bm.array.high)[[2]] <- unique(trees.use$PlotID)
+dimnames(bm.array.low)[[2]] <- unique(trees.use$PlotID)
+
+summary(bm.array.high[,,1])
+
+dim(bm.array.low)
+dim(bm.array.mean)
+dim(bm.array.high)
+
+#####################################################################
+# Starting the Loop
+#####################################################################
+
+for(i in 1:nrow(allometries[[1]])){
+  allom.temp <- g.filled.diam
+  allom.temp[,] <- NA
   
   # Species loop for calculating tree biomass
   for(j in unique(trees.use$spp.allom)){
@@ -216,8 +267,8 @@ summary(bm.array[,,1])
     #                               DBH = g.filled.diam[,cols])
     # mu0 = ifelse(!(allometries[[j]][i,"mu0"]==0 & allometries[[j]][i,"mu1"]==0),allometries[[j]][i,"mu0"], allometries[[j]][i,"Bg0"])
     # mu1 = ifelse(!(allometries[[j]][i,"mu0"]==0 & allometries[[j]][i,"mu1"]==0),allometries[[j]][i,"mu1"], allometries[[j]][i,"Bg1"])
-    mu0=allometries[[j]][i,mean("Bg0")]
-    mu1=allometries[[j]][i,mean("Bg1")]
+    mu0=allometries[[j]][i,"Bg0"]
+    mu1=allometries[[j]][i,"Bg1"]
     allom.temp[,cols] <- allom.eq(mu0=mu0, mu1 = mu1, DBH = g.filled.diam[,cols])
   }
   # summing to the plot level
@@ -228,20 +279,109 @@ summary(bm.array[,,1])
   # We're doing the unit conversions here; we had calculated density in stems/ha, but Christy wants to look at Biomass in kg/m2, so we're putting everything in kg/m2 here
   for(p in 1:length(plots)){
     cols <- which(names(allom.temp) %in% trees.use[trees.use$PlotID==plots[p], "TreeID"])
-    if(substr(plots[p],1,1)=="V"){
-      bm.array[,p,i] <- rowMeans(allom.temp[,cols])*plot.data[plot.data$PlotID==paste(plots[p]), "Density.Total..stems.ha."]/10000 #mean tree * trees/ha (do for Valles only bc sum of trees != plot density; different sampling method than Neil)
-    } else {
-      temp1 <- temp2 <- temp3 <- allom.temp[,cols]
-      for(t in names(temp)){ # Convert biomass/tree to biomass/ha
-        temp1[,t] <- temp1[,t] * mort.list[[plots[p]]]
-        temp2[,t] <- temp2[,t] * mort.list[[plots[p]]][2,]
-        temp3[,t] <- temp3[,t] * mort.list[[plots[p]]][1,]
-      }
-      bm.array.mean[,p,i] <- rowSums(temp1) #sum biomass/ha
-      bm.array.hi[,p,i] <- rowSums(temp2) #sum biomass/ha
-      bm.array.lo[,p,i] <- rowSums(temp3) #sum biomass/ha
-    }
-  }
+#     if(substr(plots[p],1,1)=="V"){
+#       bm.array[,p,i] <- rowMeans(allom.temp[,cols])*plot.data[plot.data$PlotID==paste(plots[p]), "Density.Total..stems.ha."]/10000 #mean tree * trees/ha (do for Valles only bc sum of trees != plot density; different sampling method than Neil)
+#     } else {
+
+#         if(substr(plots[p],1,1)=="V"){
+                bm.array.mean[,p,i] <- rowMeans(allom.temp[,cols])*mort.list[[p]] #mean tree * trees/ha (do for Valles only bc sum of trees != plot density; different sampling method than Neil)
+              #  bm.array.mean[,p,i] <- rowMeans(allom.temp[,cols])*plot.data[plot.data$PlotID==paste(plots[p]), "Density.Total..stems.ha."]/10000
+                
+                bm.array.low[,p,i] <- rowMeans(allom.temp[,cols])*mort.ci.list[[p]][1,] #mean tree * trees/ha (do for Valles only bc sum of trees != plot density; different sampling method than Neil)
+                bm.array.high[,p,i] <- rowMeans(allom.temp[,cols])*mort.ci.list[[p]][2,] #mean tree * trees/ha (do for Valles only bc sum of trees != plot density; different sampling method than Neil)
+            }
+
+#                 } else {
+
+#       temp1 <- temp2 <- temp3 <- allom.temp[,cols]
+#       for(n in names(allom.temp[,cols])){ # Convert biomass/tree to biomass/ha
+#         temp1[,n] <- temp1[,n] * mort.list[[plots[p]]]
+#         temp2[,n] <- temp2[,n] * mort.ci.list[[plots[p]]][2,]
+#         temp3[,n] <- temp3[,n] * mort.ci.list[[plots[p]]][1,]
+#       
+#       bm.array.mean[,p,i] <- rowSums(temp1) #sum biomass/ha
+#       bm.array.hi[,p,i] <- rowSums(temp2) #sum biomass/ha
+#       bm.array.lo[,p,i] <- rowSums(temp3) #sum biomass/ha
+
+}
 
 #--------------------------------------------------
+summary(bm.array.mean[,,1])
+
+biom.mort.mean <- apply(bm.array.mean[,,], c(1,2), mean)
+biom.mort.mean <- as.data.frame(biom.mort.mean)
+
+biom.mort.UB <- apply(bm.array.high[,,], c(1,2), mean)
+biom.mort.UB <- as.data.frame(biom.mort.UB)
+names(biom.mort.UB) <- paste(plots, "UB", sep=".")
+
+biom.mort.LB <- apply(bm.array.low[,,], c(1,2), mean)
+biom.mort.LB <- as.data.frame(biom.mort.LB)
+names(biom.mort.LB) <- paste(plots, "LB", sep=".")
+
+summary(biom.mort.mean)
+summary(biom.mort.UB)
+summary(biom.mort.LB)
+
+# put the three separate DF into one DF to have mean, upper bound, and lower bound
+biom.mort.valles <- as.data.frame(c(biom.mort.mean, biom.mort.LB, biom.mort.UB))
+row.names(biom.mort.valles) <- row.names(biom.mort.mean)
+
+summary(biom.mort.valles)
+write.csv(biom.mort.valles, "valles_bm_mort_corrected.csv")
+
+
+# Stack biom.mort.valles 
+biom.mort.valles.stack <- stack(biom.mort.valles[1:4])
+names(biom.mort.valles.stack) <- c("Biom.Mean", "PlotID")
+biom.mort.valles.stack$Year <- as.numeric(paste(row.names(biom.mort.valles)))
+biom.mort.valles.stack$Plot <- as.factor(substr(biom.mort.valles.stack$PlotID, 3,3))
+biom.mort.valles.stack$Site <- as.factor(substr(biom.mort.valles.stack$PlotID, 1,2))
+summary(biom.mort.valles.stack)
+
+biom.mort.valles.stack.lb <- stack(biom.mort.valles[5:8])
+names(biom.mort.valles.stack.lb) <- c("Biom.LB", "PlotID")
+
+biom.mort.valles.stack.ub <- stack(biom.mort.valles[9:12])
+names(biom.mort.valles.stack.ub) <- c("Biom.UB", "PlotID")
+
+biom.mort.valles.stack$Biom.LB <- biom.mort.valles.stack.lb[,1]
+biom.mort.valles.stack$Biom.UB <- biom.mort.valles.stack.ub[,1]
+summary(biom.mort.valles.stack)
+
+load("valles_bm_recon_stack.Rdata")
+
+ggplot(data=biom.mort.valles.stack[biom.mort.valles.stack$Year<2012 & (biom.mort.valles.stack$Site=="VL"),])  + facet_grid(Plot ~ Site) +
+  geom_line(data=biom.valles.stack[biom.valles.stack$Year<2012 & (biom.valles.stack$Site=="VL"),], aes(x=Year, y=Biom.Mean, color=PlotID), linetype="dashed", size=0.5) +
+  # plotting total site basal area  
+  geom_ribbon(aes(x=Year, ymin=Biom.LB, ymax=Biom.UB, fill=PlotID), alpha=0.5) +
+  geom_line(aes(x=Year, y=Biom.Mean, color=PlotID)) +
+  scale_y_continuous(name=expression(bold(paste("Biomass (kg m" ^ "-2 ", ")"))))+
+  scale_x_continuous(name=expression(bold(paste("Year"))))+
+  ggtitle("Valles Caldera Lower (PIPO)")
+
+ggplot(data=biom.mort.valles.stack[biom.mort.valles.stack$Year<2012 & (biom.mort.valles.stack$Site=="VU"),])  + facet_grid(Plot ~ Site) +
+  #ggplot(data=biom.mort.valles.stack[biom.mort.valles.stack$Year<2012 & (biom.mort.valles.stack$PlotID=="VUB"),])  + facet_grid(Plot ~ Site) +
+  # plotting total site basal area  
+  geom_ribbon(aes(x=Year, ymin=Biom.LB, ymax=Biom.UB, fill=PlotID), alpha=0.5) +
+  geom_line(data=biom.valles.stack[biom.valles.stack$Year<2012 & (biom.valles.stack$Site=="VU"),], aes(x=Year, y=Biom.Mean, color=PlotID), linetype="dashed", size=0.5) +
+  geom_line(aes(x=Year, y=Biom.Mean, color=PlotID)) +
+  scale_y_continuous(name=expression(bold(paste("Biomass (kg m" ^ "-2 ", ")"))))+
+  scale_x_continuous(name=expression(bold(paste("Year"))))+
+  ggtitle("Valles Caldera Upper (MCON)")
+
+
+
+# valles.cum.plot<- 
+#pdf("Valles_Biomass_19March_Christy_ChojnackyOnly.pdf", height=8.5, width=11)
+ggplot(data=biom.mort.valles.stack[biom.mort.valles.stack$Year<2012,])  + facet_grid(Plot ~ Site) +
+  geom_line(data=biom.valles.stack[biom.valles.stack$Year<2012,], aes(x=Year, y=Biom.Mean, color=PlotID), linetype="dashed", size=0.5) +
+  # plotting total site basal area  
+  geom_ribbon(aes(x=Year, ymin=Biom.LB, ymax=Biom.UB, fill=PlotID), alpha=0.5) +
+  geom_line(aes(x=Year, y=Biom.Mean, color=PlotID)) +
+  scale_y_continuous(name=expression(bold(paste("Biomass (kg m" ^ "-2 ", ")"))))+
+  scale_x_continuous(name=expression(bold(paste("Year"))))+
+  ggtitle("Valles Caldera All")
+
+#scale_x_continuous(name=expression(bold(paste("Mean Annual Temperature (" ^"o", "C)"))))
 
