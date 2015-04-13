@@ -352,6 +352,7 @@ summary(biom.mort.valles.stack)
 
 save(biom.mort.valles.stack, file="valles_bm_mortality_corrected_stack.Rdata")
 load("valles_bm_recon_stack.Rdata")
+load("valles_bm_recon.Rdata")
 
 ggplot(data=biom.mort.valles.stack[biom.mort.valles.stack$Year<2012 & (biom.mort.valles.stack$Site=="VL"),])  + facet_grid(Plot ~ Site) +
   geom_line(data=biom.valles.stack[biom.valles.stack$Year<2012 & (biom.valles.stack$Site=="VL"),], aes(x=Year, y=Biom.Mean, color=PlotID), linetype="dashed", size=0.5) +
@@ -383,7 +384,25 @@ ggplot(data=biom.mort.valles.stack[biom.mort.valles.stack$Year<2012,])  + facet_
   geom_line(aes(x=Year, y=Biom.Mean, color=PlotID)) +
   scale_y_continuous(name=expression(bold(paste("Biomass (kg m" ^ "-2 ", ")"))))+
   scale_x_continuous(name=expression(bold(paste("Year"))))+
-  ggtitle("Valles Caldera All")
+  ggtitle("Valles Caldera Motality")
 
 #scale_x_continuous(name=expression(bold(paste("Mean Annual Temperature (" ^"o", "C)"))))
 
+summary(biom.mort.valles)
+summary(biom.valles)
+
+vua.diff<- biom.mort.valles[row.names(biom.mort.valles)>= 1979 & row.names(biom.mort.valles)<=2011, "VUA"] - biom.valles[row.names(biom.valles)>= 1979 & row.names(biom.valles)<=2011, "VUA"]
+vua.diff<- as.data.frame(vua.diff); row.names(vua.diff)<- c(2011:1979)
+vua.diff
+
+vub.diff<- biom.mort.valles[row.names(biom.mort.valles)>= 1979 & row.names(biom.mort.valles)<=2011, "VUB"] - biom.valles[row.names(biom.valles)>= 1979 & row.names(biom.valles)<=2011, "VUB"]
+vub.diff<- as.data.frame(vub.diff); row.names(vub.diff)<- c(2011:1979)
+vub.diff
+
+vla.diff<- biom.mort.valles[row.names(biom.mort.valles)>= 1979 & row.names(biom.mort.valles)<=2011, "VLA"] - biom.valles[row.names(biom.valles)>= 1979 & row.names(biom.valles)<=2011, "VLA"]
+vla.diff<- as.data.frame(vla.diff); row.names(vla.diff)<- c(2011:1979)
+vla.diff
+
+vlb.diff<- biom.mort.valles[row.names(biom.mort.valles)>= 1979 & row.names(biom.mort.valles)<=2011, "VLB"] - biom.valles[row.names(biom.valles)>= 1979 & row.names(biom.valles)<=2011, "VLB"]
+vlb.diff<- as.data.frame(vlb.diff); row.names(vlb.diff)<- c(2011:1979)
+vlb.diff

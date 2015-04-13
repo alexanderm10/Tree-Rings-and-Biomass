@@ -251,7 +251,9 @@ ggplot(data=valles.composite.stack[valles.composite.stack$Year<2012 & (valles.co
 ggplot(data=valles.composite.stack[valles.composite.stack$Year<2012,])  + facet_grid(Plot ~ Site) +
   # plotting total site basal area  
   geom_ribbon(aes(x=Year, ymin=Biom.LB, ymax=Biom.UB, fill=PlotID), alpha=0.5) +
-  geom_line(aes(x=Year, y=Biom.Mean, color=PlotID)) 
+  geom_line(aes(x=Year, y=Biom.Mean, color=PlotID)) +
+  ggtitle("Dated vs. Dated_plus_modeled")
+
 #   theme(axis.line=element_line(color="black", size=0.5), panel.grid.major=element_blank(), panel.grid.minor= element_blank(), panel.border= element_blank(), panel.background= element_blank(), axis.text.x=element_text(angle=0, color="black", size=12), axis.text.y=element_text(color="black", size=12))+
 #   scale_fill_discrete(name="Model", labels = c("nt.pipo.mean", "nt.piaz.mean", "nt.pine.spp", "nt.vcnp.mean", "nt.pine.dom.mean")))
 # dev.off()

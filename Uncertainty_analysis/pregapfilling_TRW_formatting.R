@@ -147,6 +147,7 @@ for(i in unique(trees)){
 min(tree.rw, na.rm=T); max(tree.rw, na.rm=T)
 dim(tree.rw)
 tree.rw[(nrow(tree.rw)-20):nrow(tree.rw),1:10]
+write.csv(tree.rw, "tree_rw.csv")
 
 # We've updated the tree.data file, so lets save our changes before we move any further
 # We only added a new column and didn't change anything that was original, so it should be okay, but lets just double check before moving forward
