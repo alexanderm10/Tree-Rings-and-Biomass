@@ -387,12 +387,20 @@ release.site$Site.NS <- recode(release.site$Site, "'VLF'='1'; 'VUF'='2'")
 levels(release.site$Site.NS) <- c("VLF", "VUF")
 summary(release.site)
 
-ggplot(data=release.site[release.site$p.Major>=0.25,]) + geom_histogram(aes(x=Year, weight=p.Major), binwidth=1) + facet_grid(Site ~ .) + large.axes2 + scale_x_continuous(breaks=c(1800,1850,1900,1950,2000)) +  scale_y_continuous(breaks=c(0,0.25))
+ggplot(data=release.site[release.site$p.Major>=0.25,]) + 
+  geom_histogram(aes(x=Year, weight=p.Major), binwidth=1) + 
+  facet_grid(Site ~ .) + large.axes2 + 
+  scale_x_continuous(breaks=c(1800,1850,1900,1950,2000)) +  scale_y_continuous(breaks=c(0,0.25))
 
-ggplot(data=release.site) + geom_histogram(aes(x=Year, weight=p.Major), binwidth=1) + facet_grid(Site.NS ~ .) + large.axes2 + scale_x_continuous(limits=c(1950, 2014),breaks=c(1950,1960,1970,1980,1990,2000)) +  scale_y_continuous(name="Percent Trees Meeting Criteria", breaks=c(0,0.15))+
+ggplot(data=release.site) + geom_histogram(aes(x=Year, weight=p.Major), binwidth=1) +
+  facet_grid(Site.NS ~ .) + large.axes2 + 
+  scale_x_continuous(limits=c(1950, 2014),breaks=c(1950,1960,1970,1980,1990,2000)) +  
+  scale_y_continuous(name="Percent Trees Meeting Criteria", breaks=c(0,0.15, 0.30, 0.45), limit=c(0,0.5))+
   ggtitle("Major Releases")
 
-ggplot(data=release.site) + geom_histogram(aes(x=Year, weight=p.Minor), binwidth=1) + facet_grid(Site.NS ~ .) + large.axes2 + scale_x_continuous(limits=c(1950, 2014), breaks=c(1950,1960,1970,1980,1990,2000)) +  scale_y_continuous(name="Percent Trees Meeting Criteria", breaks=c(0,0.15))+
+ggplot(data=release.site) + geom_histogram(aes(x=Year, weight=p.Minor), binwidth=1) + 
+  facet_grid(Site.NS ~ .) + large.axes2 + scale_x_continuous(limits=c(1950, 2014), breaks=c(1950,1960,1970,1980,1990,2000)) +  
+  scale_y_continuous(name="Percent Trees Meeting Criteria", breaks=c(0,0.15, 0.30, 0.45), limit=c(0,0.5))+
   ggtitle("Minor Releases")
 
 # ggplot(data=release.site) + geom_histogram(aes(x=Year, weight=p.Minor.large), binwidth=1) + facet_grid(Site.NS ~ .) + large.axes2 + scale_x_continuous(breaks=c(1800,1850,1900,1950,2000)) +  scale_y_continuous(name="Percent Trees Meeting Criteria", breaks=c(0,0.15))
