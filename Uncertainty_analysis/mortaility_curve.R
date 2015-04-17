@@ -1,12 +1,14 @@
 # Mortality data gathered from van Mantgem 2009
 # used interior numbers start year 1979 and end year 2011
 # used to change densities for the valles 
+load("site_density.Rdata")
+summary(site.density)
 
 start.m <- rnorm(5000, mean=0.4843, sd= 0.2823)
 rate.m <- rnorm(5000, mean= 0.024, sd= 0.027)
 
 
-start.yr = 1979
+start.yr = 1905
 end.yr = 2011
 
 mort.rate <- data.frame(array(dim=c(5000, length(start.yr:end.yr))))
@@ -211,6 +213,7 @@ mort.site.ci <-array(list(vuf.density.ci, vlf.density.ci))
 names(mort.site) <- names(mort.site.ci) <- c("VUF", "VLF")
 summary(mort.site)
 summary(mort.site.ci)
+
 #####################################################
 # applying changing densities to the biomass estimate
 #####################################################
@@ -225,7 +228,7 @@ summary(g.filled.diam)
 head(g.filled.diam)
 
 #need to truncate the diameter time series to be the same as the mortality curve time series
-g.filled.diam <- g.filled.diam[row.names(g.filled.diam)>=1979 & row.names(g.filled.diam)<=2011,]
+g.filled.diam <- g.filled.diam[row.names(g.filled.diam)>=1905 & row.names(g.filled.diam)<=2011,]
 
 
 # read in tree data
@@ -472,7 +475,7 @@ summary(g.filled.diam)
 head(g.filled.diam)
 
 #need to truncate the diameter time series to be the same as the mortality curve time series
-g.filled.diam <- g.filled.diam[row.names(g.filled.diam)>=1979 & row.names(g.filled.diam)<=2011,]
+g.filled.diam <- g.filled.diam[row.names(g.filled.diam)>=1905 & row.names(g.filled.diam)<=2011,]
 
 
 # read in tree data
@@ -640,8 +643,8 @@ summary(site.valles.stack)
 ggplot(data=site.mort.valles.stack[site.mort.valles.stack$Year<2012,])  + facet_grid(SiteID ~.) +
   geom_line(data=site.valles.stack[site.valles.stack$Year<2012,], aes(x=Year, y=site.Mean, color=SiteID), linetype="dashed", size=0.5) +
   # Siteting total site basal area  
-  geom_ribbon(aes(x=Year, ymin=site.LB, ymax=site.UB, fill=SiteID), alpha=0.5) +
+  #geom_ribbon(aes(x=Year, ymin=site.LB, ymax=site.UB, fill=SiteID), alpha=0.5) +
   geom_line(aes(x=Year, y=site.Mean, color=SiteID)) +
-  scale_y_continuous(name=expression(bold(paste("siteass (kg m" ^ "-2 ", ")"))))+
+  scale_y_continuous(name=expression(bold(paste("Biomass (kg m" ^ "-2 ", ")"))))+
   scale_x_continuous(name=expression(bold(paste("Year"))))+
   ggtitle("Valles Caldera Motality Mean Densities")
