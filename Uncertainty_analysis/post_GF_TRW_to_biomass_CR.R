@@ -32,6 +32,7 @@ summary(marcy.density)
 marcy.density$n.stems <- NULL
 
 ross.density <- read.csv("raw input files/ross_density.csv", header=T)
+ross.density.site <- ross.density[substr(ross.density$PlotID, 1,1)=="V",]
 
 valles.density <- merge(marcy.density, ross.density, all.x=T, all.y=T)
 summary(valles.density)
@@ -280,7 +281,15 @@ unique(trees.use$Species)
 trees.use$spp.allom <- recode(trees.use$Species, " 'PIEN'='picea.sp'; 'PIPO'='pipo'; 'PSME'='psme'; 'POTR' = 'potr'")
 summary(trees.use)
 plots <- unique(trees.use$PlotID) # You had the right idea, but it was throwing errors because you were trying to evaluate plots you haven't gotten to yet
-sites<- unique(site.density$PlotID)
+
+ross.density <- read.csv("raw input files/ross_density.csv", header=T)
+summary(ross.density)
+
+ross.density.site <- ross.density[substr(ross.density$PlotID, 1, 1)=="V",]
+
+
+sites<- unique(ross.density.site$PlotID)
+
 
 # will want to do general equations and pft level equations as well, but later
 # log(AGB) = mu0 + mu1*log(DBH) --equaton form of PECAN allometrics
@@ -306,7 +315,7 @@ dim(g.filled.diam)
 
 bm.array <- array(NA, dim=c(nrow(g.filled.diam), length(unique(site.density$PlotID)), nrow(allometries[[1]])))
 row.names(bm.array) <- row.names(g.filled.diam)  #CRR Added
-dimnames(bm.array)[[2]] <- unique(site.density$PlotID)
+dimnames(bm.array)[[2]] <- unique(ross.density.site$PlotID)
 summary(bm.array[,,1])
 #--------------------------------------------------
 # INSERT i LOOP HERE to go through each iteration of randomness from MCMC
@@ -342,7 +351,7 @@ for(i in 1:nrow(allometries[[1]])){
   for(p in 1:length(sites)){
     cols <- which(substr(names(allom.temp), 1, 3)==sites[p]) #%in% trees.use[trees.use$PlotID==sites[p], "TreeID"])
     if(substr(sites[p],1,1)=="V"){
-      bm.array[,p,i] <- rowMeans(allom.temp[,cols])*site.density[site.density$PlotID==paste(sites[p]), "density.m2"] #mean tree * trees/ha (do for Valles only bc sum of trees != plot density; different sampling method than Neil)
+      bm.array[,p,i] <- rowMeans(allom.temp[,cols])*ross.density.site[ross.density.site$PlotID==paste(sites[p]), "Density.Total..stems.m2."] #mean tree * trees/ha (do for Valles only bc sum of trees != plot density; different sampling method than Neil)
       #bm.array[,p,i] <- rowMeans(allom.temp[,cols])*plot.data[plot.data$PlotID==paste(plots[p]), "density.m2"] #mean tree * trees/ha (do for Valles only bc sum of trees != plot density; different sampling method than Neil)
     } else {
       temp <- allom.temp[,cols]
@@ -365,7 +374,7 @@ site.ci <- apply(bm.array[,,], c(1,2), quantile, c(0.025, 0.975)) # bm.array==th
 # site.se <- apply(bm.array[,,], c(1,2), se)
 
 site.mean <- as.data.frame(site.mean)
-names(site.mean)<- sites
+#names(site.mean)<- sites
 
 site.lbound <- data.frame(site.ci[1,,])
 names(site.lbound) <- paste(sites, "LB", sep=".")

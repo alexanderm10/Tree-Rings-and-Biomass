@@ -39,10 +39,15 @@ summary(trees.use)
 #quick plot
 #spag.plot(g.filled.diam)
 
-load("site_density.Rdata")
-summary(site.density)
+# load("site_density.Rdata")
+# summary(site.density)
 
-sites <- unique(site.density$PlotID)
+ross.density <- read.csv("raw input files/ross_density.csv", header=T)
+
+ross.density.site <- ross.density[substr(ross.density$PlotID, 1, 1)=="V",]
+
+# sites <- unique(site.density$PlotID)
+sites <- unique(ross.density.site$PlotID)
 
 plot.data <- read.csv("raw input files/DOE_plus_Valles.csv")
 summary(plot.data)
@@ -112,7 +117,7 @@ dated.bm<-bm.dated.array
 for(p in 1:length(sites)){
    cols <- which(substr(names(bm.dated.array), 1, 3)==sites[p]) #%in% trees.use[trees.use$PlotID==sites[p], "TreeID"])
  
-   dated.bm[,] <- bm.dated.array[,cols]*site.density[site.density$PlotID==paste(sites[p]), "density.m2"] #mean tree * trees/ha (do for Valles only bc sum of trees != plot density; different sampling method than Neil)
+   dated.bm[,] <- bm.dated.array[,cols]*ross.density.site[ross.density.site$PlotID==paste(sites[p]), "Density.Total..stems.m2."] #mean tree * trees/ha (do for Valles only bc sum of trees != plot density; different sampling method than Neil)
  
   
 }
@@ -230,6 +235,13 @@ summary(trees.use)
 plot.data <- read.csv("raw input files/DOE_plus_Valles.csv")
 summary(plot.data)
 
+ross.density <- read.csv("raw input files/ross_density.csv", header=T)
+
+ross.density.site <- ross.density[substr(ross.density$PlotID, 1, 1)=="V",]
+
+# sites <- unique(site.density$PlotID)
+sites <- unique(ross.density.site$PlotID)
+
 
 ##########################################################################
 # Allometric Equations
@@ -299,7 +311,7 @@ all.bm <- bm.all.array
 for(p in 1:length(sites)){
   cols <- which(substr(names(bm.all.array), 1, 3)==sites[p]) #%in% trees.use[trees.use$PlotID==sites[p], "TreeID"])
   
-  all.bm[,] <- bm.all.array[,cols]*site.density[site.density$PlotID==paste(sites[p]), "density.m2"] #mean tree * trees/ha (do for Valles only bc sum of trees != plot density; different sampling method than Neil)
+  all.bm[,] <- bm.all.array[,cols]*ross.density.site[ross.density.site$PlotID==paste(sites[p]), "Density.Total..stems.m2."] #mean tree * trees/ha (do for Valles only bc sum of trees != plot density; different sampling method than Neil)
   
 }
 

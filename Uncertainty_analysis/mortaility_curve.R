@@ -3,6 +3,10 @@
 # used to change densities for the valles 
 load("site_density.Rdata")
 summary(site.density)
+ross.density <- read.csv("raw input files/ross_density.csv", header=T)
+
+ross.density.site <- ross.density[substr(ross.density$PlotID, 1, 1)=="V",]
+
 
 start.m <- rnorm(5000, mean=0.4843, sd= 0.2823)
 rate.m <- rnorm(5000, mean= 0.024, sd= 0.027)
@@ -133,7 +137,8 @@ lines(vub.density.ci[1,]~names(vub.density), lty="dashed")
 lines(vub.density.ci[2,]~ names(vub.density), lty="dashed")
 
 vuf.density <- vector(length=length(end.yr:start.yr))
-vuf.density[] <- 0.1177709
+# vuf.density[] <- 0.1177709
+vuf.density[] <- 0.1527775
 names(vuf.density) <- end.yr:start.yr
 
 for(i in 2:length(vuf.density)){
@@ -145,7 +150,8 @@ vuf.density.ci <-  data.frame(array(dim=c(nrow(ci), ncol(ci))))
 rownames(vuf.density.ci) <- row.names(ci)
 row.names(vuf.density.ci) <- names(ci.mort.rate)
 vuf.density.ci <-  ci.mort.rate 
-vuf.density.ci[] <- 0.1177709
+# vuf.density.ci[] <- 0.1177709
+vuf.density.ci[] <- 0.1527775
 
 for(j in 1:nrow(vuf.density.ci)){
   for(i in 2:ncol(vuf.density.ci)){
@@ -157,7 +163,8 @@ lines(vuf.density.ci[1,]~names(vuf.density), lty="dashed")
 lines(vuf.density.ci[2,]~ names(vuf.density), lty="dashed")
 
 vlf.density <- vector(length=length(end.yr:start.yr))
-vlf.density[] <- 0.1568394
+# vlf.density[] <- 0.1568394
+vlf.density[] <- 0.3400110
 names(vlf.density) <- end.yr:start.yr
 
 for(i in 2:length(vlf.density)){
@@ -169,7 +176,8 @@ vlf.density.ci <-  data.frame(array(dim=c(nrow(ci), ncol(ci))))
 rownames(vlf.density.ci) <- row.names(ci)
 row.names(vlf.density.ci) <- names(ci.mort.rate)
 vlf.density.ci <-  ci.mort.rate 
-vlf.density.ci[] <- 0.1568394
+# vlf.density.ci[] <- 0.1568394
+vlf.density.ci[] <- 0.3400110
 
 for(j in 1:nrow(vlf.density.ci)){
   for(i in 2:ncol(vlf.density.ci)){
@@ -207,10 +215,10 @@ summary(mort.list)
 
 summary(mort.ci.list)
 
-mort.site <- array(list(vuf.density, vlf.density))
-mort.site.ci <-array(list(vuf.density.ci, vlf.density.ci))
+mort.site <- array(list(vlf.density, vuf.density))
+mort.site.ci <-array(list(vlf.density.ci, vuf.density.ci))
 
-names(mort.site) <- names(mort.site.ci) <- c("VUF", "VLF")
+names(mort.site) <- names(mort.site.ci) <- c("VLF", "VUF")
 summary(mort.site)
 summary(mort.site.ci)
 
@@ -406,6 +414,8 @@ save(biom.mort.valles.stack, file="valles_bm_mortality_corrected_stack.Rdata")
 load("valles_bm_recon_stack.Rdata")
 load("valles_bm_recon.Rdata")
 
+summary(biom.valles.stack)
+
 ggplot(data=biom.mort.valles.stack[biom.mort.valles.stack$Year<2012 & (biom.mort.valles.stack$Site=="VL"),])  + facet_grid(Plot ~ Site) +
   geom_line(data=biom.valles.stack[biom.valles.stack$Year<2012 & (biom.valles.stack$Site=="VL"),], aes(x=Year, y=Biom.Mean, color=PlotID), linetype="dashed", size=0.5) +
   # plotting total site basal area  
@@ -491,6 +501,11 @@ summary(plot.data)
 load("site_density.Rdata")
 summary(site.density)
 
+ross.density <- read.csv("raw input files/ross_density.csv", header=T)
+summary(ross.density)
+
+ross.density.site <- ross.density[substr(ross.density$PlotID, 1, 1)=="V",]
+
 
 
 #Convert to biomass with the allometric equation
@@ -505,7 +520,7 @@ unique(trees.use$Species)
 trees.use$spp.allom <- recode(trees.use$Species, " 'PIEN'='picea.sp'; 'PIPO'='pipo'; 'PSME'='psme'; 'POTR' = 'potr'")
 summary(trees.use)
 plots <- unique(trees.use$PlotID) # You had the right idea, but it was throwing errors because you were trying to evaluate plots you haven't gotten to yet
-sites <- unique(site.density$PlotID)
+sites <- unique(ross.density.site$PlotID)
 
 # will want to do general equations and pft level equations as well, but later
 # log(AGB) = mu0 + mu1*log(DBH) --equaton form of PECAN allometrics
@@ -523,9 +538,9 @@ summary(g.filled.diam)
 dim(g.filled.diam)
 
 #want to set up an array that has the layers 1) the time series of biomass 2) mean mortality numbers at the plot level 3) confidence intervals for the plots
-site.array.mean <- array(NA, dim=c(nrow(g.filled.diam), length(unique(site.density$PlotID)), nrow(allometries[[1]])))
-site.array.high <- array(NA, dim=c(nrow(g.filled.diam), length(unique(site.density$PlotID)), nrow(allometries[[1]])))
-site.array.low <- array(NA, dim=c(nrow(g.filled.diam), length(unique(site.density$PlotID)), nrow(allometries[[1]])))
+site.array.mean <- array(NA, dim=c(nrow(g.filled.diam), length(unique(ross.density.site$PlotID)), nrow(allometries[[1]])))
+site.array.high <- array(NA, dim=c(nrow(g.filled.diam), length(unique(ross.density.site$PlotID)), nrow(allometries[[1]])))
+site.array.low <- array(NA, dim=c(nrow(g.filled.diam), length(unique(ross.density.site$PlotID)), nrow(allometries[[1]])))
 
 
 
@@ -533,9 +548,9 @@ row.names(site.array.mean) <- row.names(g.filled.diam)  #CRR Added
 row.names(site.array.high) <- row.names(g.filled.diam)  #CRR Added
 row.names(site.array.low) <- row.names(g.filled.diam)  #CRR Added
 
-dimnames(site.array.mean)[[2]] <- unique(site.density$PlotID)
-dimnames(site.array.high)[[2]] <- unique(site.density$PlotID)
-dimnames(site.array.low)[[2]] <- unique(site.density$PlotID)
+dimnames(site.array.mean)[[2]] <- unique(sites)
+dimnames(site.array.high)[[2]] <- unique(sites)
+dimnames(site.array.low)[[2]] <- unique(sites)
 
 summary(site.array.high[,,1])
 
@@ -604,6 +619,8 @@ site.mort.LB <- apply(site.array.low[,,], c(1,2), mean)
 site.mort.LB <- as.data.frame(site.mort.LB)
 names(site.mort.LB) <- paste(sites, "LB", sep=".")
 
+#names(site.mort.mean)<- c("VUF","VLF")
+
 summary(site.mort.mean)
 summary(site.mort.UB)
 summary(site.mort.LB)
@@ -637,7 +654,7 @@ summary(site.mort.valles.stack)
 
 save(site.mort.valles.stack, file="valles_bm_site_mortality_corrected_stack.Rdata")
 load("valles_bm_recon_site_stack.Rdata")
-load("valles_bm_recon_site.Rdata")
+#load("valles_bm_site_mortality_corrected_stack.Rdata")
 summary(site.valles.stack)
 
 ggplot(data=site.mort.valles.stack[site.mort.valles.stack$Year<2012,])  + facet_grid(SiteID ~.) +
