@@ -117,7 +117,7 @@ dated.bm<-bm.dated.array
 for(p in 1:length(sites)){
    cols <- which(substr(names(bm.dated.array), 1, 3)==sites[p]) #%in% trees.use[trees.use$PlotID==sites[p], "TreeID"])
  
-   dated.bm[,] <- bm.dated.array[,cols]*ross.density.site[ross.density.site$PlotID==paste(sites[p]), "Density.Total..stems.m2."] #mean tree * trees/ha (do for Valles only bc sum of trees != plot density; different sampling method than Neil)
+   dated.bm[,cols] <- bm.dated.array[,cols]*ross.density.site[ross.density.site$PlotID==paste(sites[p]), "Density.Total..stems.m2."] #mean tree * trees/ha (do for Valles only bc sum of trees != plot density; different sampling method than Neil)
  
   
 }
@@ -311,7 +311,7 @@ all.bm <- bm.all.array
 for(p in 1:length(sites)){
   cols <- which(substr(names(bm.all.array), 1, 3)==sites[p]) #%in% trees.use[trees.use$PlotID==sites[p], "TreeID"])
   
-  all.bm[,] <- bm.all.array[,cols]*ross.density.site[ross.density.site$PlotID==paste(sites[p]), "Density.Total..stems.m2."] #mean tree * trees/ha (do for Valles only bc sum of trees != plot density; different sampling method than Neil)
+  all.bm[,cols] <- bm.all.array[,cols]*ross.density.site[ross.density.site$PlotID==paste(sites[p]), "Density.Total..stems.m2."] #mean tree * trees/ha (do for Valles only bc sum of trees != plot density; different sampling method than Neil)
   
 }
 
