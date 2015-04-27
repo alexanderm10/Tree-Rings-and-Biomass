@@ -182,36 +182,27 @@ summary(biom.valles)
 head(biom.valles)
 
 save(biom.valles, file="valles_bm_recon.Rdata")
-#save(biom.valles, file="biom.valles_cum.csv")
 
-#---------------------------------------------------------------------
-# This we did in a loop above to make it mroe flexible for the future
-# (and we did it right this time)
-#---------------------------------------------------------------------
-# biom.valles.cum.dens <- biom.valles
-# 
-# biom.valles.cum.dens$VLA <- biom.valles.cum.dens$VLA / 144/1000
-# biom.valles.cum.dens$VLA.ci <- biom.valles.cum.dens$VLA.ci /144/1000
-# biom.valles.cum.dens$VLA.se <- biom.valles.cum.dens$VLA.se /144/1000
-# 
-# biom.valles.cum.dens$VLB <- biom.valles.cum.dens$VLB /624/1000
-# biom.valles.cum.dens$VLB.ci <- biom.valles.cum.dens$VLB.ci /624/1000
-# biom.valles.cum.dens$VLB.se <- biom.valles.cum.dens$VLB.se /624/1000
-# 
-# biom.valles.cum.dens$VUA <- biom.valles.cum.dens$VUA /576/1000
-# biom.valles.cum.dens$VUA.ci <- biom.valles.cum.dens$VUA.ci /576/1000
-# biom.valles.cum.dens$VUA.se <- biom.valles.cum.dens$VUA.se /576/1000
-# 
-# biom.valles.cum.dens$VUB <- biom.valles.cum.dens$VUB /576/1000
-# biom.valles.cum.dens$VUB.ci <- biom.valles.cum.dens$VUB.ci /576/1000
-# biom.valles.cum.dens$VUB.se <- biom.valles.cum.dens$VUB.se /576/1000
-# 
-# summary(biom.valles.cum.dens)
-# biom.valles.cum.dens$year <- as.factor(row.names(biom.valles.cum.dens))
-# head(biom.valles.cum.dens)
+ci.vu <- data.frame(Year=as.numeric(row.names(biom.valles)), SiteID= "VUF",
+                    Mean = rowMeans(biom.valles[,c("VUA", "VUB")]),
+                    LB=apply(biom.valles[,c("VUA", "VUB")],1, quantile, 0.025), 
+                    UB=apply(biom.valles[,c("VUA", "VUB")],1, quantile, 0.975))
+ci.vl <- data.frame(Year=as.numeric(row.names(biom.valles)), SiteID= "VLF",
+                    Mean = rowMeans(biom.valles[,c("VLA", "VLB")]),
+                    LB=apply(biom.valles[,c("VLA", "VLB")],1, quantile, 0.025), 
+                    UB=apply(biom.valles[,c("VLA", "VLB")],1, quantile, 0.975))
 
-# now we have biomass per m^2 for each plot with SD
-#---------------------------------------------------------------------
+dens.uncert <- rbind(ci.vl, ci.vu)
+summary(dens.uncert)
+
+ggplot(dens.uncert[dens.uncert$Year <=2011,]) + facet_grid(SiteID ~ .) +
+  geom_ribbon(aes(x=Year, ymin=LB, ymax=UB, fill=SiteID), alpha=0.5) +
+  geom_line(aes(x=Year, y=Mean, color=SiteID))
+
+save(dens.uncert, file="valles_density_uncertainty.Rdata")
+
+
+
 
 #save(biom.valles.cum.dens, file="biom_valles_dum_m2.csv")
 
@@ -259,7 +250,7 @@ ggplot(data=biom.valles.stack[biom.valles.stack$Year<2012 & (biom.valles.stack$S
 
 # valles.cum.plot<- 
 #pdf("Valles_Biomass_19March_Christy_ChojnackyOnly.pdf", height=8.5, width=11)
-ggplot(data=biom.valles.stack[biom.valles.stack$Year<2012,])  + facet_grid(Plot ~ Site) +
+ggplot(data=biom.valles.stack[biom.valles.stack$Year<2012,])  + facet_grid(Site ~ .) +
   # plotting total site basal area  
   geom_ribbon(aes(x=Year, ymin=Biom.LB, ymax=Biom.UB, fill=PlotID), alpha=0.5) +
   geom_line(aes(x=Year, y=Biom.Mean, color=PlotID)) 
@@ -269,7 +260,7 @@ ggplot(data=biom.valles.stack[biom.valles.stack$Year<2012,])  + facet_grid(Plot 
 
 
 #########################################################################
-# Now we want to look at the site level biomass
+# Now we want to look at the site level biomass Allometric Uncertainty
 ##########################################################################
 
 
@@ -318,10 +309,12 @@ min(g.filled.diam, na.rm=T)
 summary(g.filled.diam)
 dim(g.filled.diam)
 
-bm.array <- array(NA, dim=c(nrow(g.filled.diam), length(unique(site.density$PlotID)), nrow(allometries[[1]])))
+bm.array <- array(NA, dim=c(nrow(g.filled.diam), ncol(g.filled.diam), nrow(allometries[[1]])))
 row.names(bm.array) <- row.names(g.filled.diam)  #CRR Added
-dimnames(bm.array)[[2]] <- unique(ross.density.site$PlotID)
-summary(bm.array[,,1])
+dimnames(bm.array)[[2]] <- names(g.filled.diam)
+# summary(bm.array[,,1])
+dim(bm.array)
+
 #--------------------------------------------------
 # INSERT i LOOP HERE to go through each iteration of randomness from MCMC
 # This is one big loop that goes through each layer of the 500 iterations
@@ -353,24 +346,52 @@ for(i in 1:nrow(allometries[[1]])){
   
   # biomass loop for summing trees to plots
   # We're doing the unit conversions here; we had calculated density in stems/ha, but Christy wants to look at Biomass in kg/m2, so we're putting everything in kg/m2 here
-  for(p in 1:length(sites)){
-    cols <- which(substr(names(allom.temp), 1, 3)==sites[p]) #%in% trees.use[trees.use$PlotID==sites[p], "TreeID"])
-    if(substr(sites[p],1,1)=="V"){
-      bm.array[,p,i] <- rowMeans(allom.temp[,cols])*ross.density.site[ross.density.site$PlotID==paste(sites[p]), "Density.Total..stems.m2."] #mean tree * trees/ha (do for Valles only bc sum of trees != plot density; different sampling method than Neil)
-      #bm.array[,p,i] <- rowMeans(allom.temp[,cols])*plot.data[plot.data$PlotID==paste(plots[p]), "density.m2"] #mean tree * trees/ha (do for Valles only bc sum of trees != plot density; different sampling method than Neil)
-    } else {
-      temp <- allom.temp[,cols]
-      for(n in names(temp)){ # Convert biomass/tree to biomass/ha
-        temp[,n] <- temp[,n] * tree.data[tree.data$TreeID==t,"Density..stems.ha."]/10000
-      }
-      bm.array[,p,i] <- rowSums(temp) #sum biomass/ha
+  for(p in 1:length(plots)){
+    cols <- which(names(allom.temp) %in% trees.use[trees.use$PlotID==plots[p], "TreeID"])
+    dens <- ross.density.plot[ross.density.plot$PlotID==paste(plots[p]), "Density.Total..stems.m2."]
+    for(c in 1:length(cols)){
+      bm.array[,cols[c],i] <- allom.temp[,cols[c]]*dens #mean tree * trees/ha (do for Valles only bc sum of trees != plot density; different sampling method than Neil)
+      
     }
+
+      #bm.array[,p,i] <- rowMeans(allom.temp[,cols])*plot.data[plot.data$PlotID==paste(plots[p]), "density.m2"] #mean tree * trees/ha (do for Valles only bc sum of trees != plot density; different sampling method than Neil)
+#      } #else {
+#       temp <- allom.temp[,cols]
+#       for(n in names(temp)){ # Convert biomass/tree to biomass/ha
+#         temp[,n] <- temp[,n] * tree.data[tree.data$TreeID==t,"Density..stems.ha."]/10000
+#       }
+#       bm.array[,p,i] <- rowSums(temp) #sum biomass/ha
+#     }
   }
 }
 #--------------------------------------------------
 #bm.array[,,1]
-summary(bm.array[,,1])
+summary(bm.array[,1:10,1])
 
+# Get to site level by taking mean of trees (ignoring plots & potential pseudoreplication issues)
+vlf.mean <- apply(bm.array[,substr(dimnames(bm.array)[[2]],1,3)=="VLF",], c(1,3), mean) # bm.array==the array you're working with, 3 = do the funciton to the layers (3rd dim), mean = the function you're running
+dim(vlf.mean)
+summary(vlf.mean[,1:10])
+
+
+vuf.mean <- apply(bm.array[,substr(dimnames(bm.array)[[2]],1,3)=="VUF",], c(1,3), mean) # bm.array==the array you're working with, 3 = do the funciton to the layers (3rd dim), mean = the function you're running
+dim(vuf.mean)
+summary(vuf.mean[,1:10])
+
+
+vlf.ci <- data.frame(Year=as.numeric(row.names(vlf.mean)), SiteID="VLF", Mean=rowMeans(vlf.mean), LB=apply(vlf.mean,1,quantile, 0.025), UB=apply(vlf.mean,1,quantile, 0.975))
+summary(vlf.ci)
+
+vuf.ci <- data.frame(Year=as.numeric(row.names(vuf.mean)), SiteID="VUF", Mean=rowMeans(vuf.mean), LB=apply(vuf.mean,1,quantile, 0.025), UB=apply(vuf.mean,1,quantile, 0.975))
+summary(vuf.ci)
+
+allom.uncert <- data.frame(rbind(vlf.ci, vuf.ci))
+
+ggplot(allom.uncert[allom.uncert$Year<=2011,]) + facet_grid(SiteID ~.) +
+  geom_ribbon(aes(x=Year, ymin=LB, ymax=UB, fill=SiteID), alpha=0.5) +
+  geom_line(aes(x=Year, y=Mean, color=SiteID))
+
+save(allom.uncert, file="valles_allometry_uncertainty.Rdata")
 
 ### OUTSIDE of all LOOPs (iteration + species + plots)
 # You should now have a 3-dimensional array with plots as columns, years as rows, and iterations as layers
