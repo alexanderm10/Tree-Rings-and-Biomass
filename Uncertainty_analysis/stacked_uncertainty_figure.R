@@ -13,6 +13,9 @@ allom.uncert <- allom.uncert[order(allom.uncert$Year),]
 allom.uncert <- allom.uncert[order(allom.uncert$SiteID),]
 summary(allom.uncert)
 
+summary(allom.uncert[allom.uncert$SiteID=="VLF",])
+summary(allom.uncert[allom.uncert$SiteID=="VUF",])
+
 # density BM--uses mean allometric eqtn. and accounts for differences in density with just ROSS plots
 load("valles_density_uncertainty.Rdata")
 dens.uncert$LB.dev <- dens.uncert$Mean - dens.uncert$LB
@@ -20,6 +23,9 @@ dens.uncert$UB.dev <-  dens.uncert$UB - dens.uncert$Mean
 dens.uncert <- dens.uncert[order(dens.uncert$Year),]
 dens.uncert <- dens.uncert[order(dens.uncert$SiteID),]
 summary(dens.uncert)
+
+summary(dens.uncert[dens.uncert$SiteID=="VLF",])
+summary(dens.uncert[dens.uncert$SiteID=="VUF",])
 
 # mortality Uncertainty of BM at the site level
 load("valles_mortality_uncertainty.Rdata")
@@ -32,6 +38,9 @@ mort.uncert$LB.dev <- dens.uncert$Mean - mort.uncert$LB
 mort.uncert$UB.dev <-  mort.uncert$UB - dens.uncert$Mean
 summary(mort.uncert)
 
+summary(mort.uncert[mort.uncert$SiteID=="VLF",])
+summary(mort.uncert[mort.uncert$SiteID=="VUF",])
+
 # uncertainty in the increment
 load("dated_v_all_valles.inc.stack.Rdata")
 valles.inc.stack <- valles.inc.stack[valles.inc.stack$group=="all",]
@@ -42,7 +51,8 @@ valles.inc.stack$LB.dev <- valles.inc.stack$Mean.inc - valles.inc.stack$inc.LB
 valles.inc.stack$UB.dev <- valles.inc.stack$inc.UB - valles.inc.stack$Mean.inc
 summary(valles.inc.stack)
 
-
+summary(valles.inc.stack[valles.inc.stack$SiteID=="VLF",])
+summary(valles.inc.stack[valles.inc.stack$SiteID=="VUF",])
 
 #combine the different areas into one figure
 # 
@@ -56,7 +66,7 @@ summary(valles.inc.stack)
 # Creating a dataframe that adds the uncertainties together
 # will use the mean from the allometric uncertainty as our root
 
-# doing a test first with just VLF
+# doing a test first with just VLF--it worked--- expanding to both sites at Valles Caldera.
 bm.final <- data.frame(Year=unique(allom.uncert$Year), SiteID=allom.uncert$SiteID, 
                         Base=allom.uncert[,"Mean"])
 bm.final$LB.inc <- bm.final$Base - valles.inc.stack[,"LB.dev"]
@@ -77,7 +87,8 @@ bm.final$LB.mort <- ifelse(bm.final$LB.dens<0, 0, bm.final$LB.dens)
 
 summary(bm.final)
 
-
+summary(bm.final[bm.final$SiteID=="VLF",])   
+summary(bm.final[bm.final$SiteID=="VUF",])   
 
 ggplot(bm.final[bm.final$Year >= 1925 & bm.final$Year <=2011,]) + facet_grid(SiteID ~ .) +
   geom_line(aes(x=Year, y=Base), size=1.5, color="black") +
