@@ -2525,7 +2525,6 @@ all.vlf <- all.bm[,substr(names(all.bm), 1, 4)=="VLF"]
 all.vuf <- all.bm[,substr(names(all.bm), 1, 4)=="VUF"]
 dim(all.vlf)
 all.vlf <- all.bm[,substr(names(all.bm), 1, 3)=="VLF"]
-all.vlf <- all.bm[,substr(names(all.bm), 1, 3)=="VLF"]
 dim(all.vlf)
 all.vuf <- all.bm[,substr(names(all.bm), 1, 3)=="VUF"]
 dim(all.vuf)
@@ -2764,11 +2763,6 @@ ggplot(data=all.valles.sample.stack[all.valles.sample.stack$Year<2012,])  + face
   # plotting total site basal area  #
   geom_ribbon(aes(x=Year, ymin=all.sample.LB, ymax=all.sample.UB, color=SiteID), alpha=0.5) +#
   geom_line(aes(x=Year, y=all.Mean.sample, color=SiteID))+#
-  labs(title= "All Trees BM sample", x="Year", y="Bm sample. (kg/m2)")
-ggplot(data=all.valles.sample.stack[all.valles.sample.stack$Year<2012,])  + facet_grid(SiteID ~.) +#
-  # plotting total site basal area  #
-  geom_ribbon(aes(x=Year, ymin=all.sample.LB, ymax=all.sample.UB, color=SiteID, fill=SiteID), alpha=0.5) +#
-  geom_line(aes(x=Year, y=all.Mean.sample, color=SiteID, fill=SiteID))+#
   labs(title= "All Trees BM sample", x="Year", y="Bm sample. (kg/m2)")
 ggplot(data=all.valles.sample.stack[all.valles.sample.stack$Year<2012,])  + facet_grid(SiteID ~.) +#
   # plotting total site basal area  #

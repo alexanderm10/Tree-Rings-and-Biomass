@@ -448,7 +448,7 @@ ggplot(data=valles.inc.stack[valles.inc.stack$Year<2012,])  + facet_grid(SiteID 
   labs(title= "Comparison BM inc", x="Year", y="Bm inc. (kg/m2)")
 
 save(valles.inc.stack, file="dated_v_all_valles.inc.stack.Rdata")
-
+load("dated_v_all_valles.inc.stack.Rdata")
 
 ####################################################################
 # Making total & proportion dated lines through time

@@ -13,6 +13,8 @@ allom.uncert <- allom.uncert[order(allom.uncert$Year),]
 allom.uncert <- allom.uncert[order(allom.uncert$SiteID),]
 summary(allom.uncert)
 
+allom.uncert$range <- allom.uncert$UB - allom.uncert$LB
+
 summary(allom.uncert[allom.uncert$SiteID=="VLF",])
 summary(allom.uncert[allom.uncert$SiteID=="VUF",])
 
@@ -23,6 +25,8 @@ dens.uncert$UB.dev <-  dens.uncert$UB - dens.uncert$Mean
 dens.uncert <- dens.uncert[order(dens.uncert$Year),]
 dens.uncert <- dens.uncert[order(dens.uncert$SiteID),]
 summary(dens.uncert)
+
+dens.uncert$range <- dens.uncert$UB - dens.uncert$LB
 
 summary(dens.uncert[dens.uncert$SiteID=="VLF",])
 summary(dens.uncert[dens.uncert$SiteID=="VUF",])
@@ -38,6 +42,8 @@ mort.uncert$LB.dev <- dens.uncert$Mean - mort.uncert$LB
 mort.uncert$UB.dev <-  mort.uncert$UB - dens.uncert$Mean
 summary(mort.uncert)
 
+mort.uncert$range <- mort.uncert$UB - mort.uncert$LB
+
 summary(mort.uncert[mort.uncert$SiteID=="VLF",])
 summary(mort.uncert[mort.uncert$SiteID=="VUF",])
 
@@ -51,8 +57,16 @@ valles.inc.stack$LB.dev <- valles.inc.stack$Mean.inc - valles.inc.stack$inc.LB
 valles.inc.stack$UB.dev <- valles.inc.stack$inc.UB - valles.inc.stack$Mean.inc
 summary(valles.inc.stack)
 
+valles.inc.stack$range <- valles.inc.stack$inc.UB - valles.inc.stack$inc.LB
+
 summary(valles.inc.stack[valles.inc.stack$SiteID=="VLF",])
 summary(valles.inc.stack[valles.inc.stack$SiteID=="VUF",])
+
+
+
+
+
+
 
 #combine the different areas into one figure
 # 
@@ -90,6 +104,20 @@ summary(bm.final)
 summary(bm.final[bm.final$SiteID=="VLF",])   
 summary(bm.final[bm.final$SiteID=="VUF",])   
 
+# adding the uncertainties together in quadarture
+
+vlf.final <- bm.final[bm.final$SiteID=="VLF",]
+vuf.final <- bm.final[bm.final$SiteID=="VUF",]
+
+vlf.final$range <- vlf.final$UB.mort - vlf.final$LB.mort
+vuf.final$range <- vuf.final$UB.mort - vuf.final$LB.mort
+
+summary(vlf.final)
+summary(vuf.final)
+
+
+
+
 ggplot(bm.final[bm.final$Year >= 1925 & bm.final$Year <=2011,]) + facet_grid(SiteID ~ .) +
   geom_line(aes(x=Year, y=Base), size=1.5, color="black") +
 
@@ -113,5 +141,62 @@ ggplot(bm.final[bm.final$Year >= 1925 & bm.final$Year <=2011,]) + facet_grid(Sit
   labs(title= "Stacked Uncertainties", x="Year", y="Aboveground Biomass (kg/m2)")
 
   
+
+
+
+########################################################
+# Uncertainty percentages
+########################################################
+
+
+
+# Looking at relative magnitudes of uncertainties
+
+# Allometry
+vlf.allom.rel <- allom.uncert[allom.uncert$SiteID=="VLF", "range"]/allom.uncert[allom.uncert$SiteID=="VLF", "Mean"]
+vuf.allom.rel <- allom.uncert[allom.uncert$SiteID=="VUF", "range"]/allom.uncert[allom.uncert$SiteID=="VUF", "Mean"]
+summary(vlf.allom.rel)
+summary(vuf.allom.rel)
+
+mean(vlf.allom.rel, na.rm=T); sd(vlf.allom.rel, na.rm=T)
+mean(vuf.allom.rel, na.rm=T); sd(vuf.allom.rel, na.rm=T)
+
+
+# Density
+vlf.dens.rel <- dens.uncert[dens.uncert$SiteID=="VLF", "range"]/allom.uncert[allom.uncert$SiteID=="VLF", "Mean"]
+vuf.dens.rel <- dens.uncert[dens.uncert$SiteID=="VUF", "range"]/allom.uncert[allom.uncert$SiteID=="VUF", "Mean"]
+summary(vlf.dens.rel)
+summary(vuf.dens.rel)
+
+mean(vlf.dens.rel, na.rm=T); sd(vlf.dens.rel, na.rm=T)
+mean(vuf.dens.rel, na.rm=T); sd(vuf.dens.rel, na.rm=T)
+
+
+# Mortality
+vlf.mort.rel <- mort.uncert[mort.uncert$SiteID=="VLF", "range"]/allom.uncert[allom.uncert$SiteID=="VLF", "Mean"]
+vuf.mort.rel <- mort.uncert[mort.uncert$SiteID=="VUF", "range"]/allom.uncert[allom.uncert$SiteID=="VUF", "Mean"]
+summary(vlf.mort.rel)
+summary(vuf.mort.rel)
+
+mean(vlf.mort.rel, na.rm=T); sd(vlf.mort.rel, na.rm=T)
+mean(vuf.mort.rel, na.rm=T); sd(vuf.mort.rel, na.rm=T)
+
+
+# TR increment
+vlf.inc.rel <- valles.inc.stack[valles.inc.stack$SiteID=="VLF", "range"]/allom.uncert[allom.uncert$SiteID=="VLF", "Mean"]
+vuf.inc.rel <- valles.inc.stack[valles.inc.stack$SiteID=="VUF", "range"]/allom.uncert[allom.uncert$SiteID=="VUF", "Mean"]
+summary(vlf.inc.rel)
+summary(vuf.inc.rel)
+
+mean(vlf.mort.rel, na.rm=T); sd(vlf.mort.rel, na.rm=T)
+mean(vuf.mort.rel, na.rm=T); sd(vuf.mort.rel, na.rm=T)
+
+# Overall uncertainty
+
+vlf.final.rel  <- vlf.final$range/vlf.final$Base
+vuf.final.rel <- vuf.final$range/vuf.final$Base
+
+mean(vlf.final.rel, na.rm=T); sd(vlf.final.rel, na.rm=T)
+mean(vuf.final.rel, na.rm=T); sd(vuf.final.rel, na.rm=T)
   
   
