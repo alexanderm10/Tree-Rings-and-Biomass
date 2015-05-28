@@ -132,7 +132,7 @@ dim(release.minor)
 release.minor[1:10, 1:11]
 # years <- disturb$Year
 
-release.majoar <- read.csv("Trees_ReleaseEvents_MajorRelease.csv", row.names=1)
+release.major <- read.csv("Trees_ReleaseEvents_MajorRelease.csv", row.names=1)
 dim(release.major)
 release.major[1:10, 1:11]
 
@@ -203,9 +203,10 @@ dim(dated.stack2)
 # 
 # write.csv(cores.stack3, "ReleaseEvents_Trees.csv", row.names=F)
 # 
-# ##############################################################################
-# # Aggregating to the Plot Level
-# ##############################################################################
+
+##############################################################################
+# Aggregating to the Plot Level
+##############################################################################
 # cores.stack3 <- read.csv("ReleaseEvents_Trees.csv")
 # summary(cores.stack3)
 
@@ -218,6 +219,7 @@ release.plot1 <- aggregate(dated.stack2[,c("Release.Minor", "Release.Major")], b
 names(release.plot1) <- c("Year", "PlotID", "Site", "Release.Minor", "Release.Major")
 summary(release.plot1)
 
+# Calculating the number of trees showing release
 release.plot2 <- aggregate(dated.stack2[,c("n.Minor", "n.Major", "Stems")], by=list(dated.stack2$Year, dated.stack2$PlotID, dated.stack2$Site), FUN=sum, na.rm=T)
 names(release.plot2) <- c("Year", "PlotID", "Site", "n.Minor", "n.Major", "n.Plot")
 summary(release.plot2)
@@ -226,6 +228,7 @@ hist(release.plot2$n.Major)
 hist(release.plot2$n.Plot)
 unique(release.plot2$n.Major)
 
+# Merge the data sets together and find the proportion of trees showing release
 dim(release.plot1); dim(release.plot2)
 release.plot <- merge(release.plot1, release.plot2, all.x=T, all.y=T)
 release.plot$p.Minor <- release.plot$n.Minor/release.plot$n.Plot
@@ -365,6 +368,13 @@ summary(release.plot2)
 
 min(release.plot2[release.plot2$p.Minor>0, "p.Minor"], na.rm=T)
 hist(release.plot2[release.plot2$p.Minor>0, "p.Minor"])
+
+
+
+ggplot(data=release.plot2[release.plot2$Site=="VUF",]) + geom_histogram(aes(x=Year, weight=p.Minor), binwidth=1) + facet_grid(Site ~ Plot) + large.axes2 + scale_x_continuous(breaks=c(1900,2000))
+
+ggplot(data=release.plot2[release.plot2$Site=="VLF",]) + geom_histogram(aes(x=Year, weight=p.Minor), binwidth=1) + facet_grid(Site ~ Plot) + large.axes2 + scale_x_continuous(breaks=c(1900,2000))
+
 
 ggplot(data=release.plot2[release.plot2$Site=="VLF",]) + geom_histogram(aes(x=Year, weight=p.Minor), binwidth=1) + facet_grid(Site ~ Plot) + large.axes2 + scale_x_continuous(breaks=c(1900,2000))
 
