@@ -1,4 +1,5 @@
 library(ggplot2)
+library(grid)
 ##############################################################################
 # wanting to make a composite figure showing the contribution of uncertainties
 ##############################################################################
@@ -116,30 +117,44 @@ summary(vlf.final)
 summary(vuf.final)
 
 
+levels(bm.final$SiteID) <- c("Lower Tower", "Upper Tower")
+# large.axes <- theme(axis.line=element_line(color="black", size=0.5), panel.grid.major=element_blank(), panel.grid.minor= element_blank(), panel.border= element_blank(), panel.background= element_blank(), axis.text.x=element_text(angle=0, color="black", size=rel(1.5)), axis.text.y=element_text(color="black", size=rel(1.5)), axis.title.x=element_text(face="bold", size=rel(1.5), vjust=-0.5),  axis.title.y=element_text(face="bold", size=rel(1.5), vjust=0.75), plot.margin=unit(c(0.1,0.5,0.5,0.1), "lines"))
 
-
+# png("~/Dropbox/PalEON CR/Tree Rings/Tree-Rings-and-Biomass/Uncertainty_analysis/StackedUncertainties.png", width=600, height=800, units="px")
+png("~/Dropbox/PalEON CR/Tree Rings/Tree-Rings-and-Biomass/Uncertainty_analysis/StackedUncertainties.png", width=5, height=6, units="in", res=1200)
 ggplot(bm.final[bm.final$Year >= 1925 & bm.final$Year <=2011,]) + facet_grid(SiteID ~ .) +
   geom_line(aes(x=Year, y=Base), size=1.5, color="black") +
 
   #1) Increment Uncertainty
-  geom_ribbon(aes(x=Year, ymin=LB.inc, ymax=UB.inc), alpha=0.5, fill="green3") +
+  geom_ribbon(aes(x=Year, ymin=LB.inc, ymax=UB.inc, fill="1"), alpha=0.6) +
 
   #2) Allometric Uncertainty -- separate for upper & lower to make things clearer
-  geom_ribbon(aes(x=Year, ymin=LB.allom, ymax=LB.inc), alpha=0.5, fill="blue") +
-  geom_ribbon(aes(x=Year, ymin=UB.allom, ymax=UB.inc), alpha=0.5, fill="blue") +
+  geom_ribbon(aes(x=Year, ymin=LB.allom, ymax=LB.inc, fill="2"), alpha=0.6) +
+  geom_ribbon(aes(x=Year, ymin=UB.allom, ymax=UB.inc, fill="2"), alpha=0.6) +
   
   #3) Density Uncertainty -- separate for upper & lower to make things clearer
-  geom_ribbon(aes(x=Year, ymin=LB.dens, ymax=LB.allom), alpha=0.5, fill="red") +
-  geom_ribbon(aes(x=Year, ymin=UB.dens, ymax=UB.allom), alpha=0.5, fill="red") +
+  geom_ribbon(aes(x=Year, ymin=LB.dens, ymax=LB.allom, fill="3"), alpha=0.6) +
+  geom_ribbon(aes(x=Year, ymin=UB.dens, ymax=UB.allom, fill="3"), alpha=0.6) +
   
   #4) Mortality Uncertainty -- separate for upper & lower to make things clearer
-  geom_ribbon(aes(x=Year, ymin=LB.mort, ymax=LB.dens), alpha=0.5, fill="orange2") +
-  geom_ribbon(aes(x=Year, ymin=UB.mort, ymax=UB.dens), alpha=0.5, fill="orange2") +
+  geom_ribbon(aes(x=Year, ymin=LB.mort, ymax=LB.dens, fill="4"), alpha=0.6) +
+  geom_ribbon(aes(x=Year, ymin=UB.mort, ymax=UB.dens, fill="4"), alpha=0.6) +
   
   # Reiterate mean line for clarity
   geom_line(aes(x=Year, y=Base), size=1.5, color="black") +
-  labs(title= "Stacked Uncertainties", x="Year", y="Aboveground Biomass (kg/m2)")
 
+  # Legend Formatting
+  labs(title= "Stacked Uncertainties", x="Year", y=expression(bold(paste("Aboveground Biomass (kg m"^"-2",")")))) +
+  scale_fill_manual(name="Uncertainty", values=c("green3", "blue", "red", "orange2"), labels=c("Increment", "Allometry", "Plot Density", "Mortality")) +
+  guides(fill=guide_legend(override.aes=list(alpha=0.15))) +
+#  theme(legend.position=c(0.2,0.85), legend.text=element_text(size=rel(1.25)), legend.title=element_text(size=rel(1.25)))  + 
+  theme(legend.position=c(0.2,0.85)) + 
+
+  # General Plot formatting
+  theme(axis.line=element_line(color="black", size=0.5), panel.grid.major=element_blank(), panel.grid.minor= element_blank(), panel.border= element_blank(), panel.background= element_blank(), axis.text.x=element_text(angle=0, color="black", size=rel(1.5)), axis.text.y=element_text(color="black", size=rel(1.5)), axis.title.x=element_text(face="bold", size=rel(1.5), vjust=-0.5),  axis.title.y=element_text(face="bold", size=rel(1.5), vjust=1), plot.margin=unit(c(0.1,0.5,0.5,0.1), "lines")) +
+
+  theme(strip.text=element_text(size=rel(1.5), face="bold"))
+dev.off()
   
 
 
