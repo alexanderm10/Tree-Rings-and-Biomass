@@ -2774,3 +2774,7 @@ ggplot(data=all.valles.sample.stack[all.valles.sample.stack$Year<2012,])  + face
   geom_ribbon(aes(x=Year, ymin=all.sample.LB, ymax=all.sample.UB, fill=SiteID), alpha=0.5) +#
   geom_line(aes(x=Year, y=all.Mean.sample, color=SiteID))+#
   labs(title= "All Trees BM sample", x="Year", y="Bm sample. (kg/m2)")
+load("/Users/malexander10/Dropbox/phd/carbon research/Tree-Rings-and-Biomass/Uncertainty_analysis/marcy_density.Rdata")
+ls()
+summary(marcy.density)
+load("/Users/mrossalexander/PhD/Carbon Research/Tree-Rings-and-Biomass/Uncertainty_analysis/valles_bm_recon_Dated_only.Rdata")

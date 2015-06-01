@@ -54,6 +54,9 @@ summary(marcy)
 marcy.valles <- marcy[, c("Tree_Tag_Number", "PlotID", "Species", "DBH..cm.", "Density.Total..stems.m2.", "Site")]
 names(marcy.valles) <- c("tree.id", "plot.id", "species", "dbh", "density", "site")
 summary(marcy.valles)
+marcy.valles$year <- ifelse(marcy.valles$site == "PPINE", 2013, 2012)
+
+save(marcy.valles, file="marcy_valles_metadata.Rdata")
 dim(marcy.valles)
 
 

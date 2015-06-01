@@ -105,7 +105,7 @@ summary(bm.final)
 summary(bm.final[bm.final$SiteID=="VLF",])   
 summary(bm.final[bm.final$SiteID=="VUF",])   
 
-# adding the uncertainties together in quadarture
+# finding the range of the uncertainties
 
 vlf.final <- bm.final[bm.final$SiteID=="VLF",]
 vuf.final <- bm.final[bm.final$SiteID=="VUF",]
@@ -203,8 +203,8 @@ vuf.inc.rel <- valles.inc.stack[valles.inc.stack$SiteID=="VUF", "range"]/allom.u
 summary(vlf.inc.rel)
 summary(vuf.inc.rel)
 
-mean(vlf.mort.rel, na.rm=T); sd(vlf.mort.rel, na.rm=T)
-mean(vuf.mort.rel, na.rm=T); sd(vuf.mort.rel, na.rm=T)
+mean(vlf.inc.rel, na.rm=T); sd(vlf.inc.rel, na.rm=T)
+mean(vuf.inc.rel, na.rm=T); sd(vuf.inc.rel, na.rm=T)
 
 # Overall uncertainty
 
@@ -214,4 +214,48 @@ vuf.final.rel <- vuf.final$range/vuf.final$Base
 mean(vlf.final.rel, na.rm=T); sd(vlf.final.rel, na.rm=T)
 mean(vuf.final.rel, na.rm=T); sd(vuf.final.rel, na.rm=T)
   
-  
+#################################################################
+# percentage of total uncertainty
+#################################################################
+
+# Allometry
+vlf.allom.perc <- allom.uncert[allom.uncert$SiteID=="VLF", "range"]/vlf.final$range
+vuf.allom.perc <- allom.uncert[allom.uncert$SiteID=="VUF", "range"]/vuf.final$range
+summary(vlf.allom.perc)
+summary(vuf.allom.perc)
+
+mean(vlf.allom.perc, na.rm=T); sd(vlf.allom.perc, na.rm=T)
+mean(vuf.allom.perc, na.rm=T); sd(vuf.allom.perc, na.rm=T)
+
+
+# Density
+vlf.dens.perc <- dens.uncert[dens.uncert$SiteID=="VLF", "range"]/vlf.final$range
+vuf.dens.perc <- dens.uncert[dens.uncert$SiteID=="VUF", "range"]/vuf.final$range
+summary(vlf.dens.perc)
+summary(vuf.dens.perc)
+
+mean(vlf.dens.perc, na.rm=T); sd(vlf.dens.perc, na.rm=T)
+mean(vuf.dens.perc, na.rm=T); sd(vuf.dens.perc, na.rm=T)
+
+
+# Mortality
+vlf.mort.perc <- mort.uncert[mort.uncert$SiteID=="VLF", "range"]/vlf.final$range
+vuf.mort.perc <- mort.uncert[mort.uncert$SiteID=="VUF", "range"]/vuf.final$range
+summary(vlf.mort.perc)
+summary(vuf.mort.perc)
+
+mean(vlf.mort.perc, na.rm=T); sd(vlf.mort.perc, na.rm=T)
+mean(vuf.mort.perc, na.rm=T); sd(vuf.mort.perc, na.rm=T)
+
+
+# TR increment
+vlf.inc.perc <- valles.inc.stack[valles.inc.stack$SiteID=="VLF", "range"]/vlf.final$range
+vuf.inc.perc <- valles.inc.stack[valles.inc.stack$SiteID=="VUF", "range"]/vuf.final$range
+summary(vlf.inc.perc)
+summary(vuf.inc.perc)
+
+mean(vlf.inc.perc, na.rm=T); sd(vlf.inc.perc, na.rm=T)
+mean(vuf.inc.perc, na.rm=T); sd(vuf.inc.perc, na.rm=T)
+
+mean(vlf.final$range, na.rm=T); sd(vlf.final$range, na.rm=T)
+mean(vuf.final$range, na.rm=T); sd(vuf.final$range, na.rm=T)
