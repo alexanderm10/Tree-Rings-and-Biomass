@@ -225,8 +225,6 @@ source("0_gapfill_gamm_function.R") # This is where the generalized function tha
 site.codes <- unique(substr(ring.data$PlotID,1,2))
 
 # Making dead trees have a special canopy class
-ring.data$Canopy.Class <- as.factor(ifelse(ring.data$Live.Dead=="DEAD", "SNAG", ring.data$Canopy.Class)) # Make a dead canopy class)
-summary(ring.data)
 ring.data$RW.modeled <- NA # making a placeholder vector that we're going to fill in
 for(s in site.codes){
 	rows.site <- which(substr(ring.data$PlotID,1,2)==s) # figuring out which rows belong to a given site
@@ -236,9 +234,9 @@ for(s in site.codes){
 
 	out.path <- paste0("GapFill_Metadata/", s)
 	if(substr(s,1,1)=="V" | substr(s,1,1)=="N"){
-		gamm.out <- gapfill.gamm(data=ring.data.mmf, DBH="DBH..cm.", Species.Use="Species", Canopy.Class="Canopy.Class", canopy=F, out.prefix=out.path)
+		gamm.out <- gapfill.gamm(data= data.use, DBH="DBH..cm.", Species.Use="Species", Canopy.Class="Canopy.Class", canopy=F, out.prefix=out.path)
 	} else {
-		gamm.out <- gapfill.gamm(data=ring.data.mmf, DBH="DBH..cm.", Species.Use="Species", Canopy.Class="Canopy.Class", canopy=T, out.prefix=out.path)
+		gamm.out <- gapfill.gamm(data= data.use, DBH="DBH..cm.", Species.Use="Species", Canopy.Class="Canopy.Class", canopy=T, out.prefix=out.path)
 
 	}
 	ring.data[rows.site, "RW.modeled"] <- gamm.out$data$RW.modeled
@@ -310,7 +308,7 @@ summary(fill.missing)
 out.path <- paste0("GapFill_Metadata/", "MissingTrees")
 
 # Right now we're going to run this with Canopy off because the Valles trees still don't have a Canopy Class
-gamm.missing <- gapfill.gamm(data=fill.missing, DBH="DBH..cm.", Species.Use="Species.Model", Canopy.Class="Canopy.Class", smooth.by="PlotID", canopy=F, out.prefix=out.path)
+gamm.missing <- gapfill.gamm(data=fill.missing, DBH="DBH..cm.", Species.Use="Species.Model", Canopy.Class="Canopy.Class", smooth.by="PlotID", canopy=T, out.prefix=out.path)
 
 data.all[data.all$Measured=="NO", "RW.modeled"] <- gamm.missing$data[gamm.missing$data$Measured=="NO", "RW.modeled"]
 

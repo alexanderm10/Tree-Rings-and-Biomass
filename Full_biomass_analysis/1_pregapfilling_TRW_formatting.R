@@ -25,7 +25,13 @@ tree.data$plot <- substr(tree.data$PlotID, 3, 3)
 tree.data$plot <- as.factor(tree.data$plot)
 summary(tree.data)
 
-
+# Doing some stuff to Canopy Class to make our lives easier
+#   1) Assume all Valles & Niwot trees are co-dominant
+#   2) give all dead trees without an existing canopy class a "SNAG" class
+tree.data$Canopy.Class <- as.factor(ifelse(tree.data$Live.Dead=="DEAD" & is.na(tree.data$Canopy.Class), "SNAG", 
+									ifelse(substr(tree.data$TreeID,1,1)=="V" | substr(tree.data$TreeID,1,1)=="N", "C", 
+									paste(tree.data$Canopy.Class)))) # Make a dead canopy class)
+summary(tree.data)
 
 
 #importing ring widths of dated samples as an object and making plot a factor since there were two distinct plots.  We may remove this for the nested design.  
