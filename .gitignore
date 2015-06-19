@@ -12,9 +12,13 @@ Uncertainty_analysis/.Rapp.history
 
 Uncertainty_analysis/.Rapp.history
 
-Full_biomass_analysis/processed_data/**
-Full_biomass_analysis/raw input files/**
-Full_biomass_analysis/figures/**
-Full_biomass_analysis/allometries/**
-Full_biomass_analysis/RWL/**
+Full_biomass_analysis/processed_data/*
+Full_biomass_analysis/raw input files/*
+Full_biomass_analysis/figures/*
+Full_biomass_analysis/allometries/*
+Full_biomass_analysis/RWL/*
 
+
+*.Rdata
+
+*.pdf
