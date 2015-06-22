@@ -22,3 +22,5 @@ Full_biomass_analysis/RWL/*
 *.Rdata
 
 *.pdf
+
+Uncertainty_analysis/.Rapp.history
